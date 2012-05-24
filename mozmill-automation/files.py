@@ -15,7 +15,6 @@ class JSONFile:
     def __init__(self, filename):
         self.filename = os.path.abspath(filename)
 
-
     def read(self):
         if not os.path.isfile(self.filename):
             raise errors.NotFoundException('Specified file cannot be found.',
@@ -26,7 +25,6 @@ class JSONFile:
             return json.loads(f.read())
         finally:
             f.close()
-
 
     def write(self, data):
         try:

@@ -3,11 +3,10 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-import os
 import re
 import shutil
 
-from mercurial import commands, hg, ui, __version__
+from mercurial import commands, hg, ui
 
 
 class Repository(object):
@@ -83,7 +82,7 @@ class Repository(object):
         # Retrieve the name of the repository
         branch = re.search('.*/([\S\.]+$)', gecko_branch).group(1)
 
-        # Make sure that the default branch is used for builds of any nightly channel
+        # Ensure that the default branch is used for Nightly builds
         # This will work with Firefox and Thunderbird
         if re.match(r'.*central', branch):
             branch = "default"
