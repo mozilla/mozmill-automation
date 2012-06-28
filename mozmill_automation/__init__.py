@@ -3,6 +3,4 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
-from errors import *
-from files import *
-from repository import *
+from testrun import *

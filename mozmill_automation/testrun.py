@@ -319,3 +319,10 @@ class FunctionalTestRun(TestRun):
             TestRun.run_tests(self)
         except Exception, e:
             raise
+
+
+def functional_cli():
+    try:
+        FunctionalTestRun().run()
+    except TestFailedException:
+        sys.exit(2)
