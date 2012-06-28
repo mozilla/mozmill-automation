@@ -12,10 +12,10 @@ import manifestparser
 import mozinstall
 import mozmill
 import mozmill.logger
-import mozmill.report
 
 import application
 import report
+import reports
 import repository
 
 MOZMILL_TESTS_REPOSITORIES = {
@@ -191,15 +191,14 @@ class TestRun(object):
         """ Preparation which has to be done before starting a test. """
 
         # instantiate handlers
-        handlers = []
-        logging_handler = mozmill.logger.LoggerListener(log_file=self.options.logfile,
-                                                        console_level='DEBUG',
-                                                        file_level='DEBUG',
-                                                        debug=self.debug)
-        handlers.append(logging_handler)
+        logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
+                                               console_level=self.debug and 'DEBUG' or 'INFO',
+                                               file_level=self.debug and 'DEBUG' or 'INFO',
+                                               debug=self.debug)
+        handlers = [logger]
         if self.options.report_url:
-            report_handler = mozmill.report.Report(report=self.options.report_url)
-            handlers.append(report_handler)
+            self.report = reports.DashboardReport(self.options.report_url, self)
+            handlers.append(self.report)
 
         # instantiate MozMill
         profile_args = dict(addons=self.addon_list)
@@ -213,9 +212,6 @@ class TestRun(object):
         if self.timeout:
             mozmill_args['jsbridge_timeout'] = self.timeout
         self._mozmill = mozmill.MozMill.create(**mozmill_args)
-
-        # XXX this should be done with a custom report handler [TODO]
-        # self._mozmill.report_callback = self.update_report
 
         self.installed_addons = None
         self._mozmill.add_listener(self.addons_event, eventType='mozmill.installedAddons')
@@ -254,15 +250,10 @@ class TestRun(object):
             manifests=[os.path.join(self.repository_path, self.manifest_path)],
             strict=False)
 
-        for test in manifest.tests:
-            try:
-                self._mozmill.run(*manifest.tests)
-            except SystemExit:
-                # Mozmill itself calls sys.exit(1) but we do not want to exit
-                pass
+        self._mozmill.run(manifest.tests)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
-        self.last_failed_tests = self.last_failed_tests or self._mozmill.mozmill.fails
+        self.last_failed_tests = self.last_failed_tests or self._mozmill.results.fails
 
         self._generate_custom_report()
         self.testrun_index += 1
@@ -291,6 +282,7 @@ class TestRun(object):
                     print str(e)
                     self.last_exception = e
                 finally:
+                    self._mozmill.results.finish(self._mozmill.handlers)
                     self.cleanup_binary(binary)
 
         finally:
@@ -306,31 +298,6 @@ class TestRun(object):
             # If a test has been failed ensure that we exit with status 2
             if self.last_failed_tests:
                 raise TestFailedException()
-
-    def send_report(self, report_url):
-        """ Send the report to a CouchDB instance. """
-
-        report = self.update_report(self._report)
-        return self._mozmill.mozmill.send_report(report, report_url)
-
-    # XXX this should be done as a custom report event handler
-    def update_report(self, report):
-        """ Customize the report data. """
-
-        report['report_type'] = self.report_type
-        report['report_version'] = self.report_version
-        report['tests_repository'] = self._repository.url
-        report['tests_changeset'] = self._repository.changeset
-
-        if self.options.tags:
-            report['tags'] = self.options.tags
-
-        # Optional information received by Python callbacks
-        if self.installed_addons:
-            report['addons'] = self.installed_addons
-        if self.graphics:
-            report['system_info']['graphics'] = self.graphics
-        return report
 
 
 class FunctionalTestRun(TestRun):
