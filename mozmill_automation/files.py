@@ -35,3 +35,9 @@ class JSONFile:
             f.write(json.dumps(data))
         finally:
             f.close()
+
+
+def get_unique_filename(filename, start_index):
+    (basename, ext) = os.path.splitext(filename)
+
+    return '%s_%i%s' % (basename, start_index, ext)

@@ -14,9 +14,12 @@ import mozmill
 import mozmill.logger
 
 import application
+import errors
+import files
 import report
 import reports
 import repository
+
 
 MOZMILL_TESTS_REPOSITORIES = {
     'firefox' : "http://hg.mozilla.org/qa/mozmill-tests",
@@ -24,73 +27,21 @@ MOZMILL_TESTS_REPOSITORIES = {
 }
 
 
-class TestFailedException(Exception):
-    """ Exception for failed tests. """
-    def __init__(self):
-        Exception.__init__(self, "Some tests have failed.")
-
-
 class TestRun(object):
     """ Class to execute a Mozmill test-run. """
-
-    parser_options = {("-a", "--addons",): dict(dest="addons",
-                                                action="append",
-                                                default=None,
-                                                metavar="ADDONS",
-                                                help="Add-ons to install",
-                                                ),
-                      ("--application",): dict(dest="application",
-                                               choices=["firefox", "thunderbird"],
-                                               metavar="APP",
-                                               default="firefox",
-                                               help="Application Name, i.e. firefox, thunderbird"),
-                      ("--junit",): dict(dest="junit_file",
-                                         default=None,
-                                         metavar="PATH",
-                                         help="Create JUnit XML style report file at given path"),
-                      ("-l", "--logfile",): dict(dest="logfile",
-                                                 metavar="PATH",
-                                                 help="Path to the log file"),
-                      ("-P", "--port",): dict(dest="port",
-                                              default=None,
-                                              type="int",
-                                              metavar="PORT",
-                                              help="Port to use for JSBridge."),
-                      ('-p', "--profile",): dict(dest="profile",
-                                                 default=None,
-                                                 metavar="PATH",
-                                                 help="Profile path."),
-                      ("-r", "--report",): dict(dest="report_url",
-                                                metavar="URL",
-                                                help="Send results to the report server"),
-                      ("--repository",): dict(dest="repository_url",
-                                              default=None,
-                                              metavar="URL",
-                                              help="URL of a custom remote or local repository"),
-                      ("--screenshot-path",): dict(dest="screenshot_path",
-                                                   default=None,
-                                                   metavar="PATH",
-                                                   help="Path to use for screenshots"),
-                      ("--tag",): dict(dest="tags",
-                                       action="append",
-                                       default=None,
-                                       metavar="TAG",
-                                       help="Tag to apply to the report")
-}
-
 
     def __init__(self, args=sys.argv[1:], debug=False, repository_path=None,
                  manifest_path=None, timeout=None):
 
-        usage = "usage: %prog [options] (binaries|folders)"
-        self.parser = optparse.OptionParser(usage=usage)
-        for names, opts in self.parser_options.items():
-            self.parser.add_option(*names, **opts)
-        (self.options, self.args) = self.parser.parse_args(args)
-        # Consume the system arguments
-        del sys.argv[1:]
+        usage = "usage: %prog [options] binary"
+        parser = optparse.OptionParser(usage=usage)
+        self.add_options(parser)
+        self.options, self.args = parser.parse_args(args)
 
-        self.binaries = self.args
+        if len(self.args) > 1:
+            parser.error("Exactly one binary has to be specified.")
+
+        self.binary = self.args[0]
         self.debug = debug
         self.timeout = timeout
         self.repository_path = repository_path
@@ -106,40 +57,59 @@ class TestRun(object):
         self.testrun_index = 0
 
         self.last_failed_tests = None
-        self.last_exception = None
+
+    def add_options(self, parser):
+        """add options to the parser"""
+        parser.add_option("-a", "--addons",
+                          dest="addons",
+                          action="append",
+                          metavar="ADDONS",
+                          help="add-ons to be installed")
+        parser.add_option("--application",
+                          dest="application",
+                          default="firefox",
+                          choices=["firefox", "thunderbird"],
+                          metavar="APPLICATION",
+                          help="application name [default: %default]")
+        parser.add_option("--junit",
+                          dest="junit_file",
+                          metavar="PATH",
+                          help="JUnit XML style report file")
+        parser.add_option("--report",
+                          dest="report_url",
+                          metavar="URL",
+                          help="send results to the report server")
+        parser.add_option("--repository",
+                          dest="repository_url",
+                          metavar="URL",
+                          help="URL of a custom repository")
+        parser.add_option("--screenshot-path",
+                          dest="screenshot_path",
+                          metavar="PATH",
+                          help="path to use for screenshots")
+        parser.add_option("--tag",
+                          dest="tags",
+                          action="append",
+                          metavar="TAG",
+                          help="Tag to apply to the report")
+
+        mozmill = optparse.OptionGroup(parser, "Mozmill options")
+        mozmill.add_option("-l", "--logfile",
+                          dest="logfile",
+                          metavar="PATH",
+                          help="path to log file")
+        mozmill.add_option('-p', "--profile",
+                          dest="profile",
+                          metavar="PATH",
+                          help="path to the profile")
+        parser.add_option_group(mozmill)
 
     def _generate_custom_report(self):
         if self.options.junit_file:
-            filename = self._get_unique_filename(self.options.junit_file)
+            filename = files.get_unique_filename(self.options.junit_file,
+                                                 self.testrun_index)
             custom_report = self.update_report(self._mozmill.mozmill.get_report())
             report.JUnitReport(custom_report, filename)
-
-    def _get_unique_filename(self, filename):
-        (basename, ext) = os.path.splitext(filename)
-        return '%s_%i%s' % (basename, self.testrun_index, ext)
-
-    def cleanup_binary(self, binary):
-        """ Remove the build when it has been installed before. """
-        if mozinstall.is_installer(binary):
-            print "Uninstall build: %s" % self._folder
-            mozinstall.uninstall(self._folder)
-
-    def clone_repository(self):
-        """ Clones the repository to a local temporary location. """
-        try:
-            # XXX: mktemp is marked as deprecated but lets use it because with
-            # older versions of Mercurial the target folder should not exist.
-            self.repository_path = tempfile.mktemp(".mozmill-tests")
-            self._repository = repository.Repository(self.repository_url,
-                                                     self.repository_path)
-            self._repository.clone()
-        except Exception, e:
-            raise Exception("Failure in setting up the mozmill-tests repository. " +
-                            e.message)
-
-    def cleanup_repository(self):
-        """ Removes the local version of the repository. """
-        self._repository.remove()
 
     def download_addon(self, url, target_path):
         """ Download the XPI file. """
@@ -165,33 +135,6 @@ class TestRun(object):
             else:
                 self.addon_list.append(addon)
 
-    def prepare_binary(self, binary):
-        """ Prepare the binary for the test run. """
-
-        if mozinstall.is_installer(binary):
-            install_path = tempfile.mkdtemp(".binary")
-
-            print "Install build: %s" % binary
-            self._folder = mozinstall.install(binary, install_path)
-            self._application = mozinstall.get_binary(self._folder,
-                                                      self.options.application)
-        else:
-            # TODO: Ensure that self._folder is the same as from mozinstall
-            folder = os.path.dirname(binary)
-            self._folder = folder if not os.path.isdir(binary) else binary
-            self._application = binary
-
-    def prepare_repository(self):
-        """ Update the repository to the needed branch. """
-
-        # Retrieve the Gecko branch from the application.ini file
-        ini = application.ApplicationIni(self._application)
-        repository_url = ini.get('App', 'SourceRepository')
-
-        # Update the mozmill-test repository to match the Gecko branch
-        branch_name = self._repository.identify_branch(repository_url)
-        self._repository.update(branch_name)
-
     def prepare_tests(self):
         """ Preparation which has to be done before starting a test. """
 
@@ -212,14 +155,9 @@ class TestRun(object):
                             handlers=handlers,
                             profile_args=profile_args,
                             runner_args=runner_args)
-        if self.options.port:
-            mozmill_args['jsbridge_port'] = self.options.port
         if self.timeout:
             mozmill_args['jsbridge_timeout'] = self.timeout
         self._mozmill = mozmill.MozMill.create(**mozmill_args)
-
-        self.installed_addons = None
-        self._mozmill.add_listener(self.addons_event, eventType='mozmill.installedAddons')
 
         self.graphics = None
         self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
@@ -229,10 +167,6 @@ class TestRun(object):
             if not os.path.isdir(path):
                 os.makedirs(path)
             self._mozmill.persisted["screenshotPath"] = path
-
-    def addons_event(self, obj):
-        if not self.installed_addons:
-            self.installed_addons = obj
 
     def graphics_event(self, obj):
         if not self.graphics:
@@ -266,43 +200,61 @@ class TestRun(object):
     def run(self):
         """ Run tests for all specified builds. """
 
-        # If no binaries have been specified we cancel the test-run
-        if not self.binaries:
-            print "*** No builds have been specified. Use --help to see all options."
-            return
-
-        self.clone_repository()
+        try:
+            # XXX: mktemp is marked as deprecated but lets use it because with
+            # older versions of Mercurial the target folder should not exist.
+            self.repository_path = tempfile.mktemp(".mozmill-tests")
+            self._repository = repository.Repository(self.repository_url,
+                                                     self.repository_path)
+            self._repository.clone()
+        except Exception, e:
+            raise Exception("Failure in setting up the mozmill-tests repository. " +
+                            e.message)
 
         if self.options.addons:
             self.prepare_addons()
 
         try:
-            # Run tests for each binary
-            for binary in self.binaries:
-                try:
-                    self.prepare_binary(binary)
-                    self.prepare_repository()
-                    self.run_tests()
-                except Exception, e:
-                    print str(e)
-                    self.last_exception = e
-                finally:
-                    self._mozmill.results.finish(self._mozmill.handlers)
-                    self.cleanup_binary(binary)
+            # Prepare the binary for the test run
+            if mozinstall.is_installer(self.binary):
+                install_path = tempfile.mkdtemp(".binary")
+    
+                print "Install build: %s" % self.binary
+                self._folder = mozinstall.install(self.binary, install_path)
+                self._application = mozinstall.get_binary(self._folder,
+                                                          self.options.application)
+            else:
+                # TODO: Ensure that self._folder is the same as from mozinstall
+                folder = os.path.dirname(self.binary)
+                self._folder = folder if not os.path.isdir(self.binary) else self.binary
+                self._application = self.binary
+
+            # Prepare the repository
+            ini = application.ApplicationIni(self._application)
+            repository_url = ini.get('App', 'SourceRepository')
+    
+            # Update the mozmill-test repository to match the Gecko branch
+            branch_name = self._repository.identify_branch(repository_url)
+            self._repository.update(branch_name)
+
+            self.run_tests()
 
         finally:
-            self.remove_downloaded_addons()
-            self.cleanup_repository()
+            self._mozmill.results.finish(self._mozmill.handlers)
 
-            # If an exception has been thrown for any of the builds under test
-            # re-throw the exact same exception again. We just need it for the
-            # exit code
-            if self.last_exception:
-                raise self.last_exception
+            # Remove the build when it has been installed before
+            if mozinstall.is_installer(self.binary):
+                print "Uninstall build: %s" % self._folder
+                mozinstall.uninstall(self._folder)
+
+            self.remove_downloaded_addons()
+
+            # Remove the temporarily cloned repository
+            self._repository.remove()
 
             # If a test has been failed ensure that we exit with status 2
             if self.last_failed_tests:
-                raise TestFailedException()
+                raise errors.TestFailedException()
 
 
 class FunctionalTestRun(TestRun):
@@ -330,5 +282,5 @@ class FunctionalTestRun(TestRun):
 def functional_cli():
     try:
         FunctionalTestRun().run()
-    except TestFailedException:
+    except errors.TestFailedException:
         sys.exit(2)
