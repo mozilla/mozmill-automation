@@ -120,7 +120,8 @@ class TestRun(object):
 
     def cleanup_binary(self, binary):
         """ Remove the build when it has been installed before. """
-        if application.is_installer(self.options.application, binary):
+        if mozinstall.is_installer(binary):
+            print "Uninstall build: %s" % self._folder
             mozinstall.uninstall(self._folder)
 
     def clone_repository(self):
@@ -167,11 +168,15 @@ class TestRun(object):
     def prepare_binary(self, binary):
         """ Prepare the binary for the test run. """
 
-        if application.is_installer(self.options.application, binary):
+        if mozinstall.is_installer(binary):
             install_path = tempfile.mkdtemp(".binary")
+
+            print "Install build: %s" % binary
             self._folder = mozinstall.install(binary, install_path)
-            self._application = application.get_binary(self.options.application, self._folder)
+            self._application = mozinstall.get_binary(self._folder,
+                                                      self.options.application)
         else:
+            # TODO: Ensure that self._folder is the same as from mozinstall
             folder = os.path.dirname(binary)
             self._folder = folder if not os.path.isdir(binary) else binary
             self._application = binary
@@ -180,7 +185,7 @@ class TestRun(object):
         """ Update the repository to the needed branch. """
 
         # Retrieve the Gecko branch from the application.ini file
-        ini = application.ApplicationIni(self._folder)
+        ini = application.ApplicationIni(self._application)
         repository_url = ini.get('App', 'SourceRepository')
 
         # Update the mozmill-test repository to match the Gecko branch
@@ -315,6 +320,7 @@ class FunctionalTestRun(TestRun):
         try:
             self.manifest_path = os.path.join('tests',
                                               'functional',
+                                              'testToolbar',
                                               'manifest.ini')
             TestRun.run_tests(self)
         except Exception, e:

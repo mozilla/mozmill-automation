@@ -18,52 +18,12 @@ UPDATE_CHANNELS = ["nightly",
                    "esr", "esrtest"]
 
 
-def get_bin_folder(app_folder):
-    """ Returns the folder which contains the binaries of the application. """
-    if sys.platform in ("darwin"):
-        app_folder = os.path.join(app_folder, 'Contents', 'MacOS')
-    return app_folder
-
-
-def get_binary(application, app_folder):
-    """ Returns the binary given by the curent platform. """
-    if sys.platform in ("cygwin", "win32"):
-        path = application + ".exe"
-    elif sys.platform in ("darwin"):
-        path = ""
-    elif sys.platform in ("linux2", "sunos5"):
-        path = application
-
-    return os.path.join(app_folder, path)
-
-
-def is_app_folder(path):
-    """ Checks if the folder is an application folder. """
-    if sys.platform != "darwin":
-        path = os.path.dirname(path)
-
-    file = os.path.join(get_bin_folder(path),
-                        "application.ini")
-
-    return os.path.exists(file)
-
-
-def is_installer(application, path):
-    """ Checks if a binary is an installer. """
-    try:
-        if (os.path.splitext(path)[1] in (".bz2", ".dmg", ".exe")):
-            return os.path.basename(path) not in (application + ".exe")
-        else:
-            return False
-    except Exception:
-        return False
-
-
 class ApplicationIni(object):
     """ Class to retrieve entries from the application.ini file. """
 
-    def __init__(self, folder):
-        self.ini_file = os.path.join(get_bin_folder(folder), 'application.ini')
+    def __init__(self, binary):
+        self.ini_file = os.path.join(os.path.dirname(binary),
+                                     'application.ini')
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(self.ini_file)
@@ -72,19 +32,20 @@ class ApplicationIni(object):
         """ Retrieve the value of an entry. """
         return self.config.get(section, option)
 
+
 class UpdateChannel(object):
     """ Class to handle the update channel. """
 
     pref_regex = "(?<=pref\(\"app\.update\.channel\", \")([^\"]*)(?=\"\))"
 
-    def __init__(self, *args, **kwargs):
-        self.folder = ""
+    def __init__(self, binary, *args, **kwargs):
+        self.folder = os.path.dirname(binary)
 
     @property
     def channel_prefs_path(self):
         """ Returns the channel prefs path. """
         for pref_folder in ('preferences', 'pref'):
-            pref_path = os.path.join(get_bin_folder(self.folder),
+            pref_path = os.path.join(self.folder,
                                      'defaults',
                                      pref_folder,
                                      'channel-prefs.js')

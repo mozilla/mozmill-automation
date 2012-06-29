@@ -15,7 +15,7 @@ NAME = 'mozmill-automation'
 VERSION = '0.1'
 
 deps = ['mercurial==2.1',
-        'mozinstall==1.0',
+        'mozinstall==1.1',
         'mozmill==2.0rc1']
 
 setup(name=NAME,
