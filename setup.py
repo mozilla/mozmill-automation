@@ -44,6 +44,7 @@ setup(name=NAME,
       # -*- Entry points: -*-
       [console_scripts]
       testrun_functional = mozmill_automation:functional_cli
+      testrun_l10n = mozmill_automation:l10n_cli
       testrun_remote = mozmill_automation:remote_cli
       """,
       )

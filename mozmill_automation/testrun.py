@@ -283,6 +283,27 @@ class FunctionalTestRun(TestRun):
             raise
 
 
+class L10nTestRun(TestRun):
+    """ Class to execute a Firefox l10n test-run """
+
+    report_type = "firefox-l10n"
+    report_version = "1.0"
+
+    def __init__(self, *args, **kwargs):
+        TestRun.__init__(self, *args, **kwargs)
+
+    def run_tests(self):
+        """ Execute the existent l10n tests in sequence. """
+
+        try:
+            self.manifest_path = os.path.join('tests',
+                                              'l10n',
+                                              'manifest.ini')
+            TestRun.run_tests(self)
+        except Exception, e:
+            raise
+
+
 class RemoteTestRun(TestRun):
     """ Class to execute a test-run for remote content. """
 
@@ -314,6 +335,10 @@ def exec_testrun(cls):
 
 def functional_cli():
     exec_testrun(FunctionalTestRun)
+
+
+def l10n_cli():
+    exec_testrun(L10nTestRun)
 
 
 def remote_cli():
