@@ -6,6 +6,7 @@ import os
 import optparse
 import sys
 import tempfile
+import traceback
 import urllib
 
 import manifestparser
@@ -239,9 +240,13 @@ class TestRun(object):
 
             self.run_tests()
 
-        finally:
             self._mozmill.results.finish(self._mozmill.handlers)
 
+        except Exception, e:
+            exception_type, exception, tb = sys.exc_info()
+            traceback.print_exception(exception_type, exception, tb)
+
+        finally:
             # Remove the build when it has been installed before
             if mozinstall.is_installer(self.binary):
                 print "Uninstall build: %s" % self._folder
@@ -272,15 +277,44 @@ class FunctionalTestRun(TestRun):
         try:
             self.manifest_path = os.path.join('tests',
                                               'functional',
-                                              'testToolbar',
                                               'manifest.ini')
             TestRun.run_tests(self)
         except Exception, e:
             raise
 
 
-def functional_cli():
+class RemoteTestRun(TestRun):
+    """ Class to execute a test-run for remote content. """
+
+    report_type = "firefox-remote"
+    report_version = "1.0"
+
+    def __init__(self, *args, **kwargs):
+        TestRun.__init__(self, *args, **kwargs)
+
+    def run_tests(self):
+        """ Execute the normal and restart tests in sequence. """
+
+        try:
+            self.manifest_path = os.path.join('tests',
+                                              'remote',
+                                              'restartTests',
+                                              'manifest.ini')
+            TestRun.run_tests(self)
+        except Exception, e:
+            raise
+
+
+def exec_testrun(cls):
     try:
-        FunctionalTestRun().run()
+        cls().run()
     except errors.TestFailedException:
         sys.exit(2)
+
+
+def functional_cli():
+    exec_testrun(FunctionalTestRun)
+
+
+def remote_cli():
+    exec_testrun(RemoteTestRun)
