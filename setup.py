@@ -43,6 +43,7 @@ setup(name=NAME,
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
+      testrun_endurance = mozmill_automation:endurance_cli
       testrun_functional = mozmill_automation:functional_cli
       testrun_l10n = mozmill_automation:l10n_cli
       testrun_remote = mozmill_automation:remote_cli

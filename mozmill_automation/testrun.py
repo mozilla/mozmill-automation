@@ -39,7 +39,7 @@ class TestRun(object):
         self.add_options(parser)
         self.options, self.args = parser.parse_args(args)
 
-        if len(self.args) > 1:
+        if len(self.args) != 1:
             parser.error("Exactly one binary has to be specified.")
 
         self.binary = self.args[0]
@@ -84,6 +84,11 @@ class TestRun(object):
                           dest="repository_url",
                           metavar="URL",
                           help="URL of a custom repository")
+        parser.add_option("--restart",
+                          dest="restart",
+                          default=False,
+                          action="store_true",
+                          help="restart the application between tests")
         parser.add_option("--screenshot-path",
                           dest="screenshot_path",
                           metavar="PATH",
@@ -136,39 +141,6 @@ class TestRun(object):
             else:
                 self.addon_list.append(addon)
 
-    def prepare_tests(self):
-        """ Preparation which has to be done before starting a test. """
-
-        # instantiate handlers
-        logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
-                                               console_level=self.debug and 'DEBUG' or 'INFO',
-                                               file_level=self.debug and 'DEBUG' or 'INFO',
-                                               debug=self.debug)
-        handlers = [logger]
-        if self.options.report_url:
-            self.report = reports.DashboardReport(self.options.report_url, self)
-            handlers.append(self.report)
-
-        # instantiate MozMill
-        profile_args = dict(addons=self.addon_list)
-        runner_args = dict(binary=self._application)
-        mozmill_args = dict(app=self.options.application,
-                            handlers=handlers,
-                            profile_args=profile_args,
-                            runner_args=runner_args)
-        if self.timeout:
-            mozmill_args['jsbridge_timeout'] = self.timeout
-        self._mozmill = mozmill.MozMill.create(**mozmill_args)
-
-        self.graphics = None
-        self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
-
-        if self.options.screenshot_path:
-            path = os.path.abspath(self.options.screenshot_path)
-            if not os.path.isdir(path):
-                os.makedirs(path)
-            self._mozmill.persisted["screenshotPath"] = path
-
     def graphics_event(self, obj):
         if not self.graphics:
             self.graphics = obj
@@ -184,13 +156,11 @@ class TestRun(object):
 
     def run_tests(self):
         """ Start the execution of the tests. """
-
-        self.prepare_tests()
         manifest = manifestparser.TestManifest(
             manifests=[os.path.join(self.repository_path, self.manifest_path)],
             strict=False)
 
-        self._mozmill.run(manifest.tests)
+        self._mozmill.run(manifest.tests, self.options.restart)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
         self.last_failed_tests = self.last_failed_tests or self._mozmill.results.fails
@@ -238,6 +208,36 @@ class TestRun(object):
             branch_name = self._repository.identify_branch(repository_url)
             self._repository.update(branch_name)
 
+            # instantiate handlers
+            logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
+                                                   console_level=self.debug and 'DEBUG' or 'INFO',
+                                                   file_level=self.debug and 'DEBUG' or 'INFO',
+                                                   debug=self.debug)
+            handlers = [logger]
+            if self.options.report_url:
+                self.report = reports.DashboardReport(self.options.report_url, self)
+                handlers.append(self.report)
+
+            # instantiate MozMill
+            profile_args = dict(addons=self.addon_list)
+            runner_args = dict(binary=self._application)
+            mozmill_args = dict(app=self.options.application,
+                                handlers=handlers,
+                                profile_args=profile_args,
+                                runner_args=runner_args)
+            if self.timeout:
+                mozmill_args['jsbridge_timeout'] = self.timeout
+            self._mozmill = mozmill.MozMill.create(**mozmill_args)
+
+            self.graphics = None
+            self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
+
+            if self.options.screenshot_path:
+                path = os.path.abspath(self.options.screenshot_path)
+                if not os.path.isdir(path):
+                    os.makedirs(path)
+                self._mozmill.persisted["screenshotPath"] = path
+
             self.run_tests()
 
             self._mozmill.results.finish(self._mozmill.handlers)
@@ -262,6 +262,83 @@ class TestRun(object):
                 raise errors.TestFailedException()
 
 
+class EnduranceTestRun(TestRun):
+    """ Class to execute a Firefox endurance test-run """
+
+    report_type = "firefox-endurance"
+    report_version = "1.2"
+
+    def __init__(self, *args, **kwargs):
+
+        TestRun.__init__(self, *args, **kwargs)
+
+        self.delay = "%.0d" % (self.options.delay * 1000)
+        self.timeout = self.options.delay + 60
+        self.options.restart = self.options.no_restart
+
+    def add_options(self, parser):
+        endurance = optparse.OptionGroup(parser, "Endurance options")
+        endurance.add_option("--delay",
+                             dest="delay",
+                             default=0.1,
+                             type="float",
+                             metavar="DELAY",
+                             help="seconds to wait before each iteration "
+                                  "[default: %default]")
+        endurance.add_option("--entities",
+                             dest="entities",
+                             default=1,
+                             type="int",
+                             metavar="ENTITIES",
+                             help="number of entities to create within a test "
+                                  "snippet [default: %default]")
+        endurance.add_option("--iterations",
+                             dest="iterations",
+                             default=1,
+                             type="int",
+                             metavar="ITERATIONS",
+                             help="number of iterations to repeat each test "
+                                  "snippet [default: %default]")
+        endurance.add_option("--no-restart",
+                              dest="no_restart",
+                              default=True,
+                              action="store_false",
+                              help="don't restart the application between "
+                                   "tests [default: %default]")
+        endurance.add_option("--reserved",
+                             dest="reserved",
+                             type="string",
+                             metavar="RESERVED",
+                             help="specify a reserved test to run")
+
+        parser.add_option_group(endurance)
+
+        TestRun.add_options(self, parser)
+
+    def endurance_event(self, obj):
+        self.endurance_results.append(obj)
+
+    def run_tests(self):
+        """ Execute the endurance tests in sequence. """
+
+        self.endurance_results = []
+        self._mozmill.add_listener(self.endurance_event, eventType='mozmill.enduranceResults')
+        self._mozmill.persisted['endurance'] = {'delay': self.delay,
+                                                'iterations': self.options.iterations,
+                                                'entities': self.options.entities,
+                                                'restart': self.options.restart}
+
+        self.manifest_path = os.path.join('tests', 'endurance')
+        if not self.options.reserved:
+            self.manifest_path = os.path.join(self.manifest_path,
+                                              "manifest.ini")
+        else:
+            self.manifest_path = os.path.join(self.manifest_path,
+                                              'reserved',
+                                              self.options.reserved + ".ini")
+        TestRun.run_tests(self)
+
+
 class FunctionalTestRun(TestRun):
     """ Class to execute a Firefox functional test-run. """
 
@@ -274,13 +351,10 @@ class FunctionalTestRun(TestRun):
     def run_tests(self):
         """ Execute the functional tests. """
 
-        try:
-            self.manifest_path = os.path.join('tests',
-                                              'functional',
-                                              'manifest.ini')
-            TestRun.run_tests(self)
-        except Exception, e:
-            raise
+        self.manifest_path = os.path.join('tests',
+                                          'functional',
+                                          'manifest.ini')
+        TestRun.run_tests(self)
 
 
 class L10nTestRun(TestRun):
@@ -295,13 +369,10 @@ class L10nTestRun(TestRun):
     def run_tests(self):
         """ Execute the existent l10n tests in sequence. """
 
-        try:
-            self.manifest_path = os.path.join('tests',
-                                              'l10n',
-                                              'manifest.ini')
-            TestRun.run_tests(self)
-        except Exception, e:
-            raise
+        self.manifest_path = os.path.join('tests',
+                                          'l10n',
+                                          'manifest.ini')
+        TestRun.run_tests(self)
 
 
 class RemoteTestRun(TestRun):
@@ -316,14 +387,11 @@ class RemoteTestRun(TestRun):
     def run_tests(self):
         """ Execute the normal and restart tests in sequence. """
 
-        try:
-            self.manifest_path = os.path.join('tests',
-                                              'remote',
-                                              'restartTests',
-                                              'manifest.ini')
-            TestRun.run_tests(self)
-        except Exception, e:
-            raise
+        self.manifest_path = os.path.join('tests',
+                                          'remote',
+                                          'restartTests',
+                                          'manifest.ini')
+        TestRun.run_tests(self)
 
 
 def exec_testrun(cls):
@@ -331,6 +399,10 @@ def exec_testrun(cls):
         cls().run()
     except errors.TestFailedException:
         sys.exit(2)
+
+
+def endurance_cli():
+    exec_testrun(EnduranceTestRun)
 
 
 def functional_cli():
