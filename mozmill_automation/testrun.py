@@ -389,7 +389,6 @@ class RemoteTestRun(TestRun):
 
         self.manifest_path = os.path.join('tests',
                                           'remote',
-                                          'restartTests',
                                           'manifest.ini')
         TestRun.run_tests(self)
 
