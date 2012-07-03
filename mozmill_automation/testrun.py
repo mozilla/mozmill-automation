@@ -10,6 +10,7 @@ import traceback
 import urllib
 
 import manifestparser
+import mozinfo
 import mozinstall
 import mozmill
 import mozmill.logger
@@ -160,7 +161,8 @@ class TestRun(object):
             manifests=[os.path.join(self.repository_path, self.manifest_path)],
             strict=False)
 
-        self._mozmill.run(manifest.tests, self.options.restart)
+        tests = manifest.active_tests(**mozinfo.info)
+        self._mozmill.run(tests, self.options.restart)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
         self.last_failed_tests = self.last_failed_tests or self._mozmill.results.fails
