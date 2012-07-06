@@ -173,6 +173,12 @@ class TestRun(object):
     def run(self):
         """ Run tests for all specified builds. """
 
+        # Print platform details
+        print '*** Platform: %s %s %sbit' % (
+            str(mozinfo.os).capitalize(),
+            mozinfo.version,
+            mozinfo.bits)
+
         try:
             # XXX: mktemp is marked as deprecated but lets use it because with
             # older versions of Mercurial the target folder should not exist.
@@ -202,8 +208,12 @@ class TestRun(object):
                 self._folder = folder if not os.path.isdir(self.binary) else self.binary
                 self._application = self.binary
 
-            # Prepare the repository
             ini = application.ApplicationIni(self._application)
+            print '*** Application: %s %s' % (
+                ini.get('App', 'Name'),
+                ini.get('App', 'Version'))
+
+            # Prepare the repository
             repository_url = ini.get('App', 'SourceRepository')
     
             # Update the mozmill-test repository to match the Gecko branch
