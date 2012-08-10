@@ -18,7 +18,6 @@ import mozmill.logger
 import application
 import errors
 import files
-import report
 import reports
 import repository
 
@@ -111,13 +110,6 @@ class TestRun(object):
                           help="path to the profile")
         parser.add_option_group(mozmill)
 
-    def _generate_custom_report(self):
-        if self.options.junit_file:
-            filename = files.get_unique_filename(self.options.junit_file,
-                                                 self.testrun_index)
-            custom_report = self.update_report(self._mozmill.mozmill.get_report())
-            report.JUnitReport(custom_report, filename)
-
     def download_addon(self, url, target_path):
         """ Download the XPI file. """
         try:
@@ -167,7 +159,6 @@ class TestRun(object):
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
         self.last_failed_tests = self.last_failed_tests or self._mozmill.results.fails
 
-        self._generate_custom_report()
         self.testrun_index += 1
 
     def run(self):
@@ -229,6 +220,12 @@ class TestRun(object):
             if self.options.report_url:
                 self.report = reports.DashboardReport(self.options.report_url, self)
                 handlers.append(self.report)
+
+            if self.options.junit_file:
+                filename = files.get_unique_filename(self.options.junit_file,
+                                                     self.testrun_index)
+                self.junit_report = reports.JUnitReport(filename, self)
+                handlers.append(self.junit_report)
 
             # instantiate MozMill
             profile_args = dict(addons=self.addon_list)
