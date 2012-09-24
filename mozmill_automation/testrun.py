@@ -249,7 +249,7 @@ class TestRun(object):
 
             self.run_tests()
 
-            self._mozmill.results.finish(self._mozmill.handlers)
+            self.results = self._mozmill.finish()
 
         except Exception, e:
             exception_type, exception, tb = sys.exc_info()
