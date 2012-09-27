@@ -4,6 +4,7 @@
 
 import os
 import optparse
+import re
 import sys
 import tempfile
 import traceback
@@ -174,10 +175,18 @@ class TestRun(object):
                 self._application = mozinstall.get_binary(self._folder,
                                                           self.options.application)
             else:
-                # TODO: Ensure that self._folder is the same as from mozinstall
-                folder = os.path.dirname(self.binary)
-                self._folder = folder if not os.path.isdir(self.binary) else self.binary
-                self._application = self.binary
+                if os.path.isdir(self.binary):
+                    self._folder = self.binary
+                else:
+                    if sys.platform == "darwin":
+                        # Ensure that self._folder is the app bundle on OS X
+                        p = re.compile('.*\.app/')
+                        self._folder = p.search(self.binary).group()
+                    else:
+                        self._folder = os.path.dirname(self.binary)
+
+                self._application = mozinstall.get_binary(self._folder,
+                                                          self.options.application)
 
             ini = application.ApplicationIni(self._application)
             print '*** Application: %s %s' % (
