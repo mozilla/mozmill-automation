@@ -164,26 +164,6 @@ class TestRun(object):
     def run(self):
         """ Run tests for all specified builds. """
 
-        # Print platform details
-        print '*** Platform: %s %s %sbit' % (
-            str(mozinfo.os).capitalize(),
-            mozinfo.version,
-            mozinfo.bits)
-
-        try:
-            # XXX: mktemp is marked as deprecated but lets use it because with
-            # older versions of Mercurial the target folder should not exist.
-            self.repository_path = tempfile.mktemp(".mozmill-tests")
-            self._repository = repository.Repository(self.repository_url,
-                                                     self.repository_path)
-            self._repository.clone()
-        except Exception, e:
-            raise Exception("Failure in setting up the mozmill-tests repository. " +
-                            e.message)
-
-        if self.options.addons:
-            self.prepare_addons()
-
         try:
             # Prepare the binary for the test run
             if mozinstall.is_installer(self.binary):
@@ -204,12 +184,27 @@ class TestRun(object):
                 ini.get('App', 'Name'),
                 ini.get('App', 'Version'))
 
-            # Prepare the repository
-            repository_url = ini.get('App', 'SourceRepository')
-    
+            # Print platform details
+            print '*** Platform: %s %s %sbit' % (
+                str(mozinfo.os).capitalize(),
+                mozinfo.version,
+                mozinfo.bits)
+
+            # XXX: mktemp is marked as deprecated but lets use it because with
+            # older versions of Mercurial the target folder should not exist.
+            print "Preparing mozmill-tests repository..."
+            self.repository_path = tempfile.mktemp(".mozmill-tests")
+            self._repository = repository.Repository(self.repository_url,
+                                                     self.repository_path)
+            self._repository.clone()
+
             # Update the mozmill-test repository to match the Gecko branch
+            repository_url = ini.get('App', 'SourceRepository')
             branch_name = self._repository.identify_branch(repository_url)
             self._repository.update(branch_name)
+
+            if self.options.addons:
+                self.prepare_addons()
 
             # instantiate handlers
             logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
