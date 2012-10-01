@@ -5,6 +5,7 @@
 import os
 import optparse
 import re
+import shutil
 import sys
 import tempfile
 import traceback
@@ -48,6 +49,7 @@ class TestRun(object):
         self.timeout = timeout
         self.repository_path = repository_path
         self.manifest_path = manifest_path
+        self.persisted = {}
 
         if self.options.repository_url:
             self.repository_url = self.options.repository_url
@@ -135,6 +137,29 @@ class TestRun(object):
             else:
                 self.addon_list.append(addon)
 
+    def prepare_application(self, binary):
+        # Prepare the binary for the test run
+        if mozinstall.is_installer(self.binary):
+            install_path = tempfile.mkdtemp(".binary")
+
+            print "Install build: %s" % self.binary
+            self._folder = mozinstall.install(self.binary, install_path)
+            self._application = mozinstall.get_binary(self._folder,
+                                                      self.options.application)
+        else:
+            if os.path.isdir(self.binary):
+                self._folder = self.binary
+            else:
+                if sys.platform == "darwin":
+                    # Ensure that self._folder is the app bundle on OS X
+                    p = re.compile('.*\.app/')
+                    self._folder = p.search(self.binary).group()
+                else:
+                    self._folder = os.path.dirname(self.binary)
+
+            self._application = mozinstall.get_binary(self._folder,
+                                                      self.options.application)
+
     def graphics_event(self, obj):
         if not self.graphics:
             self.graphics = obj
@@ -155,10 +180,44 @@ class TestRun(object):
             strict=False)
 
         tests = manifest.active_tests(**mozinfo.info)
+
+        # instantiate handlers
+        logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
+                                               console_level=self.debug and 'DEBUG' or 'INFO',
+                                               file_level=self.debug and 'DEBUG' or 'INFO',
+                                               debug=self.debug)
+        handlers = [logger]
+        if self.options.report_url:
+            self.report = reports.DashboardReport(self.options.report_url, self)
+            handlers.append(self.report)
+
+        if self.options.junit_file:
+            filename = files.get_unique_filename(self.options.junit_file,
+                                                 self.testrun_index)
+            self.junit_report = reports.JUnitReport(filename, self)
+            handlers.append(self.junit_report)
+
+        # instantiate MozMill
+        profile_args = dict(addons=self.addon_list)
+        runner_args = dict(binary=self._application)
+        mozmill_args = dict(app=self.options.application,
+                            handlers=handlers,
+                            profile_args=profile_args,
+                            runner_args=runner_args)
+        if self.timeout:
+            mozmill_args['jsbridge_timeout'] = self.timeout
+        self._mozmill = mozmill.MozMill.create(**mozmill_args)
+
+        self.graphics = None
+        self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
+
+        self._mozmill.persisted.update(self.persisted)
         self._mozmill.run(tests, self.options.restart)
 
+        self.results = self._mozmill.finish()
+
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
-        self.last_failed_tests = self.last_failed_tests or self._mozmill.results.fails
+        self.last_failed_tests = self.last_failed_tests or self.results.fails
 
         self.testrun_index += 1
 
@@ -166,27 +225,7 @@ class TestRun(object):
         """ Run tests for all specified builds. """
 
         try:
-            # Prepare the binary for the test run
-            if mozinstall.is_installer(self.binary):
-                install_path = tempfile.mkdtemp(".binary")
-    
-                print "Install build: %s" % self.binary
-                self._folder = mozinstall.install(self.binary, install_path)
-                self._application = mozinstall.get_binary(self._folder,
-                                                          self.options.application)
-            else:
-                if os.path.isdir(self.binary):
-                    self._folder = self.binary
-                else:
-                    if sys.platform == "darwin":
-                        # Ensure that self._folder is the app bundle on OS X
-                        p = re.compile('.*\.app/')
-                        self._folder = p.search(self.binary).group()
-                    else:
-                        self._folder = os.path.dirname(self.binary)
-
-                self._application = mozinstall.get_binary(self._folder,
-                                                          self.options.application)
+            self.prepare_application(self.binary)
 
             ini = application.ApplicationIni(self._application)
             print '*** Application: %s %s' % (
@@ -215,45 +254,13 @@ class TestRun(object):
             if self.options.addons:
                 self.prepare_addons()
 
-            # instantiate handlers
-            logger = mozmill.logger.LoggerListener(log_file=self.options.logfile,
-                                                   console_level=self.debug and 'DEBUG' or 'INFO',
-                                                   file_level=self.debug and 'DEBUG' or 'INFO',
-                                                   debug=self.debug)
-            handlers = [logger]
-            if self.options.report_url:
-                self.report = reports.DashboardReport(self.options.report_url, self)
-                handlers.append(self.report)
-
-            if self.options.junit_file:
-                filename = files.get_unique_filename(self.options.junit_file,
-                                                     self.testrun_index)
-                self.junit_report = reports.JUnitReport(filename, self)
-                handlers.append(self.junit_report)
-
-            # instantiate MozMill
-            profile_args = dict(addons=self.addon_list)
-            runner_args = dict(binary=self._application)
-            mozmill_args = dict(app=self.options.application,
-                                handlers=handlers,
-                                profile_args=profile_args,
-                                runner_args=runner_args)
-            if self.timeout:
-                mozmill_args['jsbridge_timeout'] = self.timeout
-            self._mozmill = mozmill.MozMill.create(**mozmill_args)
-
-            self.graphics = None
-            self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
-
             if self.options.screenshot_path:
                 path = os.path.abspath(self.options.screenshot_path)
                 if not os.path.isdir(path):
                     os.makedirs(path)
-                self._mozmill.persisted["screenshotPath"] = path
+                self.persisted["screenshotPath"] = path
 
             self.run_tests()
-
-            self.results = self._mozmill.finish()
 
         except Exception, e:
             exception_type, exception, tb = sys.exc_info()
@@ -336,10 +343,10 @@ class EnduranceTestRun(TestRun):
 
         self.endurance_results = []
         self._mozmill.add_listener(self.endurance_event, eventType='mozmill.enduranceResults')
-        self._mozmill.persisted['endurance'] = {'delay': self.delay,
-                                                'iterations': self.options.iterations,
-                                                'entities': self.options.entities,
-                                                'restart': self.options.restart}
+        self.persisted['endurance'] = {'delay': self.delay,
+                                       'iterations': self.options.iterations,
+                                       'entities': self.options.entities,
+                                       'restart': self.options.restart}
 
         self.manifest_path = os.path.join('tests', 'endurance')
         if not self.options.reserved:
@@ -406,6 +413,101 @@ class RemoteTestRun(TestRun):
         TestRun.run_tests(self)
 
 
+class UpdateTestRun(TestRun):
+    """ Class to execute software update tests """
+
+    report_type = "firefox-update"
+    report_version = "1.0"
+
+    def __init__(self, *args, **kwargs):
+        TestRun.__init__(self, *args, **kwargs)
+        self.options.restart = True
+
+        self.results = [ ]
+
+        # Download of updates normally take longer than 60 seconds
+        # Soft-timeout is 360s so make the hard-kill timeout 5s longer
+        self.timeout = 365
+
+    def add_options(self, parser):
+        update = optparse.OptionGroup(parser, "Update options")
+        update.add_option("--channel",
+                          dest="channel",
+                          choices=application.UPDATE_CHANNELS,
+                          metavar="CHANNEL",
+                          help="update channel")
+        update.add_option("--no-fallback",
+                          dest="no_fallback",
+                          default=False,
+                          action="store_true",
+                          help="do not perform a fallback update")
+        update.add_option("--target-buildid",
+                          dest="target_buildid",
+                          metavar="TARGET_ID",
+                          help="expected build id of the updated build")
+        parser.add_option_group(update)
+
+        TestRun.add_options(self, parser)
+
+    def prepare_application(self, binary):
+        TestRun.prepare_application(self, binary)
+
+        # If a fallback update has to be performed, create a second copy
+        # of the application to avoid running the installer twice
+        if not self.options.no_fallback:
+            self._backup_folder = tempfile.mkdtemp(".binary_backup")
+
+            print "Create backup: %s" % self._backup_folder
+            shutil.rmtree(self._backup_folder)
+            shutil.copytree(self._folder, self._backup_folder)
+
+    def prepare_channel(self):
+        update_channel = application.UpdateChannel(self._application)
+
+        if not self.options.channel:
+            self.channel = update_channel.channel
+        else:
+            update_channel.channel = self.options.channel
+            self.channel = self.options.channel
+
+    def restore_application(self):
+        """ Restores the backup of the application binary. """
+
+        print "Restore backup: %s" % self._backup_folder, self._folder
+        shutil.rmtree(self._folder)
+        shutil.move(self._backup_folder, self._folder)
+
+    def run_tests(self):
+        """ Start the execution of the tests. """
+
+        self.prepare_channel()
+
+        self.persisted["channel"] = self.channel
+        if self.options.target_buildid:
+            self.persisted["targetBuildID"] = self.options.target_buildid
+
+        # Run direct update test
+        self.run_update_tests(False)
+
+        # Run fallback update test
+        if not self.options.no_fallback:
+            # Restore backup of original application version first
+            self.restore_application()
+
+            self.run_update_tests(True)
+
+    def run_update_tests(self, is_fallback):
+        try:
+            type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
+            self.manifest_path = os.path.join('tests',
+                                              'update',
+                                              type,
+                                              'manifest.ini')
+            TestRun.run_tests(self)
+        except Exception, e:
+            print "Execution of test-run aborted: %s" % str(e)
+
+
 def exec_testrun(cls):
     try:
         cls().run()
@@ -427,3 +529,6 @@ def l10n_cli():
 
 def remote_cli():
     exec_testrun(RemoteTestRun)
+
+def update_cli():
+    exec_testrun(UpdateTestRun)

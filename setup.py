@@ -47,5 +47,6 @@ setup(name=NAME,
       testrun_functional = mozmill_automation:functional_cli
       testrun_l10n = mozmill_automation:l10n_cli
       testrun_remote = mozmill_automation:remote_cli
+      testrun_update = mozmill_automation:update_cli
       """,
       )
