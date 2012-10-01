@@ -55,6 +55,7 @@ class TestRun(object):
             self.repository_url = self.options.repository_url
         else:
             self.repository_url = MOZMILL_TESTS_REPOSITORIES[self.options.application]
+        self._repository = None
 
         self.addon_list = []
         self.downloaded_addons = []
@@ -275,7 +276,8 @@ class TestRun(object):
             self.remove_downloaded_addons()
 
             # Remove the temporarily cloned repository
-            self._repository.remove()
+            if self._repository:
+                self._repository.remove()
 
             # If a test has been failed ensure that we exit with status 2
             if self.last_failed_tests:

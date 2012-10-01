@@ -3,6 +3,13 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 
+class InvalidBinaryException(Exception):
+    """Class for a resource not being found exception."""
+
+    def __init__(self, binary):
+        Exception.__init__(self, ': '.join(["Invalid binary specified", binary]))
+
+
 class NotFoundException(Exception):
     """Class for a resource not being found exception."""
 
