@@ -302,7 +302,7 @@ class EnduranceTestRun(TestRun):
         endurance = optparse.OptionGroup(parser, "Endurance options")
         endurance.add_option("--delay",
                              dest="delay",
-                             default=0.1,
+                             default=5,
                              type="float",
                              metavar="DELAY",
                              help="seconds to wait before each iteration "
