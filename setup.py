@@ -15,7 +15,7 @@ NAME = 'mozmill-automation'
 VERSION = '0.1'
 
 deps = ['mercurial==2.1',
-        'mozinstall==1.2',
+        'mozinstall==1.5',
         'mozmill==2.0rc1']
 
 setup(name=NAME,
@@ -43,6 +43,7 @@ setup(name=NAME,
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
+      testrun_addons = mozmill_automation:addons_cli
       testrun_endurance = mozmill_automation:endurance_cli
       testrun_functional = mozmill_automation:functional_cli
       testrun_l10n = mozmill_automation:l10n_cli

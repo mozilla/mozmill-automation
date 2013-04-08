@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import ConfigParser
 import os
 import optparse
 import re
@@ -31,7 +32,7 @@ MOZMILL_TESTS_REPOSITORIES = {
 
 
 class TestRun(object):
-    """ Class to execute a Mozmill test-run. """
+    """Base class to execute a Mozmill test-run"""
 
     def __init__(self, args=sys.argv[1:], debug=False, repository_path=None,
                  manifest_path=None, timeout=None):
@@ -284,8 +285,134 @@ class TestRun(object):
                 raise errors.TestFailedException()
 
 
+class AddonsTestRun(TestRun):
+    """Class to execute an add-ons test-run"""
+
+    report_type = "firefox-addons"
+    report_version = "1.0"
+
+    def __init__(self, *args, **kwargs):
+        TestRun.__init__(self, *args, **kwargs)
+
+        self.target_addon = None
+
+    def add_options(self, parser):
+        addons = optparse.OptionGroup(parser, "Add-ons options")
+        addons.add_option("--target-addons",
+                          dest="target_addons",
+                          default=[],
+                          metavar="ID",
+                          help="list of add-ons to test from the mozmill-test repository, "
+                               "e.g. ide@seleniumhq.org")
+        addons.add_option("--with-untrusted",
+                          dest="with_untrusted",
+                          default=False,
+                          action="store_true",
+                          help="run tests for add-ons which are not stored on AMO")
+        parser.add_option_group(addons)
+
+        TestRun.add_options(self, parser)
+
+    def get_all_addons(self):
+        """ Retrieves all add-ons inside the "addons" folder. """
+
+        path = os.path.join(self.repository_path, "tests", "addons")
+        return [entry for entry in os.listdir(path)
+                      if os.path.isdir(os.path.join(path, entry))]
+
+    def get_download_url(self):
+        """ Read the addon.ini file and get the URL of the XPI. """
+
+        filename = None
+
+        # Get the platform the script is running on
+        if sys.platform in ("cygwin", "win32"):
+            platform = "win"
+        elif sys.platform in ("darwin"):
+            platform = "mac"
+        elif sys.platform in ("linux2", "sunos5"):
+            platform = "linux"
+        else:
+            platform = None
+
+        try:
+            filename = os.path.join(self.repository_path, self._addon_path, "addon.ini")
+            config = ConfigParser.RawConfigParser()
+            config.read(filename)
+
+            return config.get("download", platform)
+        except Exception, e:
+            raise errors.NotFoundException('Could not read URL settings', filename)
+
+    def run_tests(self):
+        """ Execute the normal and restart tests in sequence. """
+
+        # If no target add-ons have been specified get all available add-on tests
+        if not self.options.target_addons:
+            self.options.target_addons = self.get_all_addons()
+
+        for addon in self.options.target_addons:
+            try:
+                # Get the download URL
+                self._addon_path = os.path.join('tests', 'addons', addon)
+
+                try:
+                    url = self.get_download_url()
+                except errors.NotFoundException, e:
+                    print str(e)
+                    continue
+
+                # Check if the download URL is trusted and we can proceed
+                if not "addons.mozilla.org" in url and not self.options.with_untrusted:
+                    print "*** Download URL for '%s' is not trusted." % os.path.basename(url)
+                    print "*** Use --with-untrusted to force testing this add-on."
+                    continue
+
+                # Download the add-on
+                self.target_addon = self.download_addon(url, tempfile.gettempdir())
+
+                # Run normal tests if some exist
+                try:
+                    self.manifest_path = os.path.join(self._addon_path,
+                                                      'tests', 'manifest.ini')
+                    self.restart_tests = False
+                    self.addon_list.append(self.target_addon)
+                    TestRun.run_tests(self)
+                except Exception, e:
+                    print str(e)
+                    self.last_exception = e
+                finally:
+                    self.addon_list.remove(self.target_addon)
+
+                # Run restart tests if some exist
+                try:
+                    self.manifest_path = os.path.join(self._addon_path,
+                                                      'restartTests', 'manifest.ini')
+                    self.restart_tests = True
+                    self.addon_list.append(self.target_addon)
+                    TestRun.run_tests(self)
+                except Exception, e:
+                    print str(e)
+                    self.last_exception = e
+                finally:
+                    self.addon_list.remove(self.target_addon)
+
+            except Exception, e:
+                print str(e)
+                self.last_exception = e
+            finally:
+                if self.target_addon:
+                    try:
+                        # Remove downloaded add-on
+                        if os.path.exists(self.target_addon):
+                            print "*** Removing target add-on '%s'." % self.target_addon
+                            os.remove(self.target_addon)
+                    except:
+                        print "*** Failed to remove target add-on '%s'." % self.target_addon
+
+
 class EnduranceTestRun(TestRun):
-    """ Class to execute a Firefox endurance test-run """
+    """Class to execute an endurance test-run"""
 
     report_type = "firefox-endurance"
     report_version = "1.2"
@@ -362,7 +489,7 @@ class EnduranceTestRun(TestRun):
 
 
 class FunctionalTestRun(TestRun):
-    """ Class to execute a Firefox functional test-run. """
+    """Class to execute a functional test-run"""
 
     report_type = "firefox-functional"
     report_version = "2.0"
@@ -380,7 +507,7 @@ class FunctionalTestRun(TestRun):
 
 
 class L10nTestRun(TestRun):
-    """ Class to execute a Firefox l10n test-run """
+    """Class to execute a l10n test-run"""
 
     report_type = "firefox-l10n"
     report_version = "1.0"
@@ -398,7 +525,7 @@ class L10nTestRun(TestRun):
 
 
 class RemoteTestRun(TestRun):
-    """ Class to execute a test-run for remote content. """
+    """Class to execute a remote testrun"""
 
     report_type = "firefox-remote"
     report_version = "1.0"
@@ -416,7 +543,7 @@ class RemoteTestRun(TestRun):
 
 
 class UpdateTestRun(TestRun):
-    """ Class to execute software update tests """
+    """Class to execute a software update testrun"""
 
     report_type = "firefox-update"
     report_version = "1.0"
@@ -515,6 +642,10 @@ def exec_testrun(cls):
         cls().run()
     except errors.TestFailedException:
         sys.exit(2)
+
+
+def addons_cli():
+    exec_testrun(AddonsTestRun)
 
 
 def endurance_cli():

@@ -7,6 +7,7 @@ import os
 import xml.dom.minidom
 
 from mozmill.report import Report
+from mozprofile.addons import AddonManager
 
 import testrun
 
@@ -48,6 +49,10 @@ class DashboardReport(Report):
         # Include graphic card related information if present
         if self.testrun.graphics:
             report['system_info']['graphics'] = self.testrun.graphics
+
+        # Add-on Testrun
+        if isinstance(self.testrun, testrun.AddonsTestRun):
+            self.get_addons_results(report)
 
         # Endurance Testrun
         if isinstance(self.testrun, testrun.EnduranceTestRun):
@@ -91,6 +96,11 @@ class DashboardReport(Report):
 
     def get_update_results(self, report):
         report['updates'] = self.testrun._mozmill.persisted['updates']
+
+        return report
+
+    def get_addons_results(self, report):
+        report['target_addon'] = AddonManager.addon_details(self.testrun.target_addon)
 
         return report
 
