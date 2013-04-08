@@ -52,6 +52,9 @@ class TestRun(object):
         self.manifest_path = manifest_path
         self.persisted = {}
 
+        # default listeners
+        self.listeners = [(self.graphics_event, 'mozmill.graphics')]
+
         if self.options.repository_url:
             self.repository_url = self.options.repository_url
         else:
@@ -211,7 +214,9 @@ class TestRun(object):
         self._mozmill = mozmill.MozMill.create(**mozmill_args)
 
         self.graphics = None
-        self._mozmill.add_listener(self.graphics_event, eventType='mozmill.graphics')
+
+        for listener in self.listeners:
+            self._mozmill.add_listener(listener[0], eventType=listener[1])
 
         self._mozmill.persisted.update(self.persisted)
         self._mozmill.run(tests, self.options.restart)
@@ -425,6 +430,9 @@ class EnduranceTestRun(TestRun):
         self.timeout = self.options.delay + 60
         self.options.restart = self.options.no_restart
 
+        self.listeners.append((self.endurance_event, 'mozmill.enduranceResults'))
+
+
     def add_options(self, parser):
         endurance = optparse.OptionGroup(parser, "Endurance options")
         endurance.add_option("--delay",
@@ -471,7 +479,6 @@ class EnduranceTestRun(TestRun):
         """ Execute the endurance tests in sequence. """
 
         self.endurance_results = []
-        self._mozmill.add_listener(self.endurance_event, eventType='mozmill.enduranceResults')
         self.persisted['endurance'] = {'delay': self.delay,
                                        'iterations': self.options.iterations,
                                        'entities': self.options.entities,
