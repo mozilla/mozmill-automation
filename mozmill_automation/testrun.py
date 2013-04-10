@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 import traceback
 import urllib
 
@@ -608,9 +609,22 @@ class UpdateTestRun(TestRun):
 
     def restore_application(self):
         """ Restores the backup of the application binary. """
+        timeout = time.time() + 15
 
-        print "Restore backup: %s" % self._backup_folder, self._folder
-        shutil.rmtree(self._folder)
+        print "*** Removing binary at '%s'" % self._folder
+        while True:
+            try:
+                shutil.rmtree(self._folder)
+                break
+            except Exception, e:
+                print str(e)
+                if time.time() >= timeout:
+                    print "*** Cannot remove folder '%s'" % self._folder
+                    raise
+                else:
+                    time.sleep(1)
+
+        print "*** Restoring backup from '%s'" % self._backup_folder
         shutil.move(self._backup_folder, self._folder)
 
     def run_tests(self):
