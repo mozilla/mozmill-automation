@@ -656,6 +656,14 @@ class UpdateTestRun(TestRun):
             TestRun.run_tests(self)
         except Exception, e:
             print "Execution of test-run aborted: %s" % str(e)
+        finally:
+            try:
+                path = self._mozmill.persisted["updateStagingPath"]
+                print "Remove updates staging folder: %s" % path
+                shutil.rmtree(path)
+            except Exception, e:
+                print "Failed to remove the update staging folder: " + str(e)
+                self.last_exception = e
 
 
 def exec_testrun(cls):
