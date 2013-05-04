@@ -16,7 +16,7 @@ VERSION = '0.1'
 
 deps = ['mercurial==2.1',
         'mozinstall==1.5',
-        'mozmill==2.0rc1']
+        'mozmill==2.0rc2']
 
 setup(name=NAME,
       version=VERSION,
