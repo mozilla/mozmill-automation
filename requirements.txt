@@ -1,0 +1,3 @@
+mercurial==2.1
+mozinstall==1.5
+mozmill==2.0rc3

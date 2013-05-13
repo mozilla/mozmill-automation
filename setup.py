@@ -14,10 +14,6 @@ except IOError:
 NAME = 'mozmill-automation'
 VERSION = '0.1'
 
-deps = ['mercurial==2.1',
-        'mozinstall==1.5',
-        'mozmill==2.0rc2']
-
 setup(name=NAME,
       version=VERSION,
       description="Automation scripts for Mozmill test execution",
@@ -39,7 +35,6 @@ setup(name=NAME,
       packages=find_packages(exclude=['legacy']),
       include_package_data=True,
       zip_safe=False,
-      install_requires=deps,
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
