@@ -15,6 +15,7 @@ class JSONFile:
     def __init__(self, filename):
         self.filename = os.path.abspath(filename)
 
+
     def read(self):
         if not os.path.isfile(self.filename):
             raise errors.NotFoundException('Specified file cannot be found.',
@@ -26,6 +27,7 @@ class JSONFile:
         finally:
             f.close()
 
+
     def write(self, data):
         try:
             folder = os.path.dirname(self.filename)
@@ -35,9 +37,3 @@ class JSONFile:
             f.write(json.dumps(data))
         finally:
             f.close()
-
-
-def get_unique_filename(filename, start_index):
-    (basename, ext) = os.path.splitext(filename)
-
-    return '%s_%i%s' % (basename, start_index, ext)

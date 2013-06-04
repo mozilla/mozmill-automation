@@ -1,13 +1,4 @@
-mozmill-automation
-==================
+This repository contains automation scripts for a couple of different test-runs.
 
-Automation scripts for Mozmill test execution
-
-
-Installation
-------------
-
-The scripts can be installed by running the following commands:
-
-    python setup.py develop
-    pip install -r requirements.txt
+For more information see our project page for automation related topics:
+https://wiki.mozilla.org/Auto-tools/Automation_Development/Projects/Mozmill_Automation

@@ -1,0 +1,47 @@
+{
+  "settings": {
+    "addons_per_run": 5,
+    "builds": ["10.0b6", "10.0.2", "10.0.3esr"],
+    "staging_path": "_staging",
+    "testrun_options": [
+      "--report=http://mozmill-addons.blargon7.com/db/",
+      "--tag=addon_compat_fx11.0"
+    ]
+  },
+  "addons": {
+    "default": [{
+      "name": "Adblock Plus",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/1865/addon-1865-latest.xpi",
+      "amo_id": 1865
+    }],
+    "extended": [{
+      "name": "Test Pilot",
+      "url": "http://stage.mozilla.org/pub/mozilla.org/addons/13661/test_pilot-1.2-fx-windows.xpi",
+      "amo_id": 13661,
+      "platforms": ["winnt", "darwin", "linux"]
+    }, {
+      "name": "Google Toolbar",
+      "url": "https://dl-ssl.google.com/firefox/google-toolbar-beta-win-h_asknot-d_asknot.xpi"
+    }, {
+      "name": "Firebug",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/1843/addon-1843-latest.xpi",
+      "amo_id": 1843
+    }, {
+      "name": "Greasemonkey",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/748/addon-748-latest.xpi",
+      "amo_id": 748
+    }, {
+      "name": "Personas Plus",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/10900/addon-10900-latest.xpi",
+      "amo_id": 10900
+    }, {
+      "name": "Download Statusbar",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/26/addon-26-latest.xpi",
+      "amo_id": 26
+    }, {
+      "name": "DownThemAll!",
+      "url": "http://addons.mozilla.org/firefox/downloads/latest/201/addon-201-latest.xpi",
+      "amo_id": 201
+    }]
+  }
+}
