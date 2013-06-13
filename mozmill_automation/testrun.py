@@ -975,7 +975,38 @@ class UpdateTestRun(TestRun):
             print result
 
     def update_report(self, report):
-      TestRun.update_report(self, report)
-      report['updates'] = self._mozmill.mozmill.persisted['updates']
+        TestRun.update_report(self, report)
+        report['updates'] = self._mozmill.mozmill.persisted['updates']
 
-      return report
+        return report
+
+
+def exec_testrun(cls):
+    try:
+        cls().run()
+    except TestFailedException:
+        sys.exit(2)
+
+
+def addons_cli():
+    exec_testrun(AddonsTestRun)
+
+
+def endurance_cli():
+    exec_testrun(EnduranceTestRun)
+
+
+def functional_cli():
+    exec_testrun(FunctionalTestRun)
+
+
+def l10n_cli():
+    exec_testrun(L10nTestRun)
+
+
+def remote_cli():
+    exec_testrun(RemoteTestRun)
+
+
+def update_cli():
+    exec_testrun(UpdateTestRun)
