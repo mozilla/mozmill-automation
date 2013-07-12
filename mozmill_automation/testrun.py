@@ -570,7 +570,6 @@ class UpdateTestRun(TestRun):
         update = optparse.OptionGroup(parser, "Update options")
         update.add_option("--channel",
                           dest="channel",
-                          choices=application.UPDATE_CHANNELS,
                           metavar="CHANNEL",
                           help="update channel")
         update.add_option("--no-fallback",

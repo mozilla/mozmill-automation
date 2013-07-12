@@ -10,14 +10,6 @@ import sys
 import errors
 
 
-# List of available update channels
-UPDATE_CHANNELS = ["nightly",
-                   "aurora", "auroratest",
-                   "beta", "betatest",
-                   "release", "releasetest",
-                   "esr", "esrtest"]
-
-
 class ApplicationIni(object):
     """ Class to retrieve entries from the application.ini file. """
 
@@ -53,14 +45,6 @@ class UpdateChannel(object):
                 return pref_path
         raise errors.NotFoundException('Channel prefs not found.', pref_path)
 
-    def is_valid_channel(self, channel):
-        """ Checks if the update channel is valid. """
-        try:
-            UPDATE_CHANNELS.index(channel);
-            return True
-        except:
-            return False
-
     def _get_channel(self):
         """ Returns the current update channel. """
         try:
@@ -78,9 +62,6 @@ class UpdateChannel(object):
         """ Sets the update channel. """
 
         print "Setting update channel to '%s'..." % value
-
-        if not self.is_valid_channel(value):
-            raise Exception("%s is not a valid update channel" % value)
 
         try:
             file = open(self.channel_prefs_path, "r")
