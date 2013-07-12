@@ -1,28 +1,57 @@
-# mozmill-automation
-With the mozmill-automation scripts the [automation development team](https://wiki.mozilla.org/Auto-tools/Automation_Development) at [Mozilla](http://www.mozilla.org/en-US/) runs ui and integration tests for Firefox.
+# Mozmill Automation
+With the mozmill-automation scripts the [automation development team][team]
+at [Mozilla][mozilla] runs UI and integration tests for Firefox.
 
-For more information see our project page for automation related topics:
-https://wiki.mozilla.org/Auto-tools/Automation_Development/Projects/Mozmill_Automation
+For more information see our [project page][project] for automation
+related topics.
 
-## Supported Testruns
+[team]: https://wiki.mozilla.org/Auto-tools/Automation_Development/
+[mozilla]: http://www.mozilla.org/
+[project]: https://wiki.mozilla.org/Auto-tools/Automation_Development/Projects/Mozmill_Automation
 
-### testrun_addons
-Script to execute available Mozmill tests for add-ons, which should usually be hosted at http://addons.mozilla.org.
+## Addons
+The `testrun_addons` script executes available Mozmill tests for add-ons,
+which should usually be hosted at http://addons.mozilla.org.
 
-### testrun_endurance
-Script to execute endurance tests for Firefox, which are long running tests to measure the memory usage and performance of Firefox.
+The `testrun_compat_addons` script is a special testrun to execute add-on
+compatibility tests for Firefox, which ensures that major add-ons are still
+working as expected for a new major release of Firefox.
 
-### testrun_functional
-Script to execute functional tests for Firefox, which are ui and integration tests, and are necessary for Mozilla QA for signing of from testing a new Firefox release.
+## Endurance
+The `testrun_endurance` script executes the endurance tests for Firefox,
+which are long running tests to measure the memory usage and performance of
+Firefox.
 
-### testrun_l10n
-Script to execute localization tests for Firefox, which are used to check that localized builds of Firefox are working as expected in terms of accessibility and graphical output.
+## Functional
+The `testrun_functional` script executes functional tests for Firefox, which
+are UI and integration tests, and are necessary for Mozilla QA for signing
+off from testing a new Firefox release.
 
-### testrun_remote
-Script to execute remote tests for Firefox, which are similar to the functional tests but make use of remote test cases to prove the functionaly against real web sites.
+## Localization
+The `testrun_l10n` script executes localization tests for Firefox, which are
+used to check that localized builds of Firefox are working as expected in
+terms of accessibility and graphical output.
 
-### testrun_update
-Script to execute update tests for Firefox, which ensures that an update is always correctly performed for Firefox.
+## Remote
+The `testrun_remote` script executes remote tests for Firefox, which are
+similar to the functional tests but make use of remote test cases to prove
+the functionality against real web sites.
 
-### testrun_compat_addons
-Special testrun to execute add-on compatibility tests for Firefox, which ensures that major add-ons are still working as expected for a new major release of Firefox.
+## Update
+The `testrun_update` script executes update tests for Firefox, which ensures
+that an update is always correctly performed for Firefox.
+
+When running update tests, you have the option of providing an update
+channel. The valid update channels are:
+
+* nightly
+* nightlytest
+* aurora
+* auroratest
+* beta
+* betatest
+* release
+* releasetest
+* esr
+* esrtest
+* esr[VERSION]-nightly (for example esr17-nightly)

@@ -795,7 +795,6 @@ class UpdateTestRun(TestRun):
 
     parser_options = copy.copy(TestRun.parser_options)
     parser_options[("--channel",)] = dict(dest="channel",
-                                          choices=application.UPDATE_CHANNELS,
                                           default=None,
                                           metavar="CHANNEL",
                                           help="Update channel")
