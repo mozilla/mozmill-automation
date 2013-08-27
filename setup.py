@@ -12,7 +12,12 @@ except IOError:
     description = None
 
 NAME = 'mozmill-automation'
-VERSION = '0.1'
+VERSION = '2.0rc5'
+
+deps = ['mercurial == 2.6.2',
+        'mozinstall == 1.7',
+        'mozmill == 2.0rc5',
+        ]
 
 setup(name=NAME,
       version=VERSION,
@@ -35,6 +40,7 @@ setup(name=NAME,
       packages=find_packages(exclude=['legacy']),
       include_package_data=True,
       zip_safe=False,
+      install_requires=deps,
       entry_points="""
       # -*- Entry points: -*-
       [console_scripts]
