@@ -10,10 +10,11 @@ related topics.
 [project]: https://wiki.mozilla.org/Auto-tools/Automation_Development/Projects/Mozmill_Automation
 
 ## Installation
-The scripts can be installed by running the following commands:
+The scripts can be installed by running the following command:
 
     python setup.py develop
-    pip install -r requirements.txt
+
+This will also install mercurial, mozinstall and mozmill if required.
 
 ## Addons
 The `testrun_addons` script executes available Mozmill tests for add-ons,
