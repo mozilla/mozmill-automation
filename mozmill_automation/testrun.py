@@ -359,6 +359,9 @@ class AddonsTestRun(TestRun):
 
         for addon in self.options.target_addons:
             try:
+                # Resets state of target addon field for every iteration
+                self.target_addon = None
+
                 # Get the download URL
                 self._addon_path = os.path.join('tests', 'addons', addon)
 
