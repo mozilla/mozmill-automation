@@ -42,6 +42,21 @@ import sys
 import errors
 
 
+def get_mozmill_tests_branch(gecko_branch):
+    """ Identify the mozmill-tests branch from the application branch. """
+
+    # Retrieve the name of the repository
+    branch = re.search('.*/([\S\.]+$)', gecko_branch).group(1)
+
+    # Supported branches: mozilla-aurora, mozilla-beta, mozilla-release, mozilla-esr*
+    # All other branches (mozilla-central, mozilla-inbound, birch, elm, oak etc.) should fallback to the 'default' branch
+    # This will work with Firefox and Thunderbird
+    if not re.match(r'.*/releases/', gecko_branch):
+        branch = "default"
+
+    return branch
+
+
 def get_bin_folder(app_folder):
     """ Returns the folder which contains the binaries of the application. """
     if sys.platform in ("darwin"):

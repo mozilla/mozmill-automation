@@ -54,8 +54,7 @@ import mozinfo
 import mozmill
 import rdf_parser
 import report
-import repository
-
+from repository import MercurialRepository
 
 MOZMILL_TESTS_REPOSITORIES = {
     'firefox' : "http://hg.mozilla.org/qa/mozmill-tests",
@@ -116,8 +115,8 @@ class TestRun(object):
                      }
 
 
-    def __init__(self, args=sys.argv[1:], debug=False, repository_path=None,
-                 test_path=None, timeout=None):
+    def __init__(self, args=sys.argv[1:], debug=False, test_path=None,
+                 timeout=None):
 
         self.mozmill_args = []
 
@@ -162,13 +161,11 @@ class TestRun(object):
         self.binaries = self.args
         self.debug = debug
         self.timeout = timeout
-        self.repository_path = repository_path
         self.test_path = test_path
 
-        if self.options.repository_url:
-            self.repository_url = self.options.repository_url
-        else:
-            self.repository_url = MOZMILL_TESTS_REPOSITORIES[self.options.application]
+        url = self.options.repository_url if self.options.repository_url \
+            else MOZMILL_TESTS_REPOSITORIES[self.options.application]
+        self.repository = MercurialRepository(url)
 
         self.addon_list = []
         self.downloaded_addons = []
@@ -261,17 +258,17 @@ class TestRun(object):
 
     def cleanup_repository(self):
         """ Removes the local version of the repository. """
-        self._repository.remove()
+        print "*** Removing test repository '%s'" % self.repository.path
+        self.repository.remove()
 
     def clone_repository(self):
         """ Clones the repository to a local temporary location. """
         try:
             # XXX: mktemp is marked as deprecated but lets use it because with
             # older versions of Mercurial the target folder should not exist.
-            self.repository_path = tempfile.mktemp(".mozmill-tests")
-            self._repository = repository.Repository(self.repository_url,
-                                                     self.repository_path)
-            self._repository.clone()
+            path = tempfile.mktemp(".mozmill-tests")
+            print "*** Cloning test repository to '%s'" % path
+            self.repository.clone(path)
         except Exception, e:
             raise Exception("Failure in setting up the mozmill-tests repository. " +
                             e.message)
@@ -323,11 +320,13 @@ class TestRun(object):
 
         # Retrieve the Gecko branch from the application.ini file
         ini = application.ApplicationIni(self._folder)
-        repository_url = ini.get('App', 'SourceRepository')
+        app_repository_url = ini.get('App', 'SourceRepository')
 
         # Update the mozmill-test repository to match the Gecko branch
-        branch_name = self._repository.identify_branch(repository_url)
-        self._repository.update(branch_name)
+        branch_name = application.get_mozmill_tests_branch(app_repository_url)
+
+        print "*** Updating branch of test repository to '%s'" % branch_name
+        self.repository.update(branch_name)
 
     def prepare_tests(self):
         """ Preparation which has to be done before starting a test. """
@@ -342,7 +341,7 @@ class TestRun(object):
         self._mozmill.options.debug = self.debug
         self._mozmill.options.binary = self._application
         self._mozmill.options.showall = True
-        self._mozmill.tests = [os.path.join(self.repository_path, self.test_path)]
+        self._mozmill.tests = [os.path.join(self.repository.path, self.test_path)]
 
         if self.timeout:
             self._mozmill.mozmill.jsbridge_timeout = self.timeout
@@ -404,13 +403,13 @@ class TestRun(object):
             print "*** No builds have been specified. Use --help to see all options."
             return
 
+        self.clone_repository()
+
         # Print platform details
         print '*** Platform: %s %s %sbit' % (
             str(mozinfo.os).capitalize(),
             mozinfo.version,
             mozinfo.bits)
-
-        self.clone_repository()
 
         if self.options.addons:
             self.prepare_addons()
@@ -453,8 +452,8 @@ class TestRun(object):
 
         report['report_type'] = self.report_type
         report['report_version'] = self.report_version
-        report['tests_repository'] = self._repository.url
-        report['tests_changeset'] = self._repository.changeset
+        report['tests_repository'] = self.repository.url
+        report['tests_changeset'] = self.repository.changeset
 
         if self.options.tags:
             report['tags'] = self.options.tags
@@ -492,7 +491,7 @@ class AddonsTestRun(TestRun):
     def get_all_addons(self):
         """ Retrieves all add-ons inside the "addons" folder. """
 
-        path = os.path.join(self.repository_path, "tests", "addons")
+        path = os.path.join(self.repository.path, "tests", "addons")
         return [entry for entry in os.listdir(path)
                       if os.path.isdir(os.path.join(path, entry))]
 
@@ -500,7 +499,7 @@ class AddonsTestRun(TestRun):
         """ Read the addon.ini file and get the URL of the XPI. """
 
         try:
-            filename = os.path.join(self.repository_path, self._addon_path, "addon.ini")
+            filename = os.path.join(self.repository.path, self._addon_path, "addon.ini")
             config = ConfigParser.RawConfigParser()
             config.read(filename)
 
@@ -545,7 +544,7 @@ class AddonsTestRun(TestRun):
 
                 # Run normal tests if some exist
                 self.test_path = os.path.join(self._addon_path, 'tests')
-                if os.path.isdir(os.path.join(self.repository_path, self.test_path)):
+                if os.path.isdir(os.path.join(self.repository.path, self.test_path)):
                     try:
                         self.restart_tests = False
                         self.addon_list.append(self.target_addon)
@@ -558,7 +557,7 @@ class AddonsTestRun(TestRun):
 
                 # Run restart tests if some exist
                 self.test_path = os.path.join(self._addon_path, 'restartTests')
-                if os.path.isdir(os.path.join(self.repository_path, self.test_path)):
+                if os.path.isdir(os.path.join(self.repository.path, self.test_path)):
                     try:
                         self.restart_tests = True
                         self.addon_list.append(self.target_addon)
