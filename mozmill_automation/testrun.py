@@ -525,6 +525,9 @@ class AddonsTestRun(TestRun):
 
         for self._addon in self.options.target_addons:
             try:
+                # Resets state of target addon field for every iteration
+                self.target_addon = None
+
                 # Get the download URL
                 self._addon_path = os.path.join('tests', 'addons', self._addon)
                 url = self.get_download_url()
@@ -574,7 +577,7 @@ class AddonsTestRun(TestRun):
             finally:
                 try:
                     # Remove downloaded add-on
-                    if os.path.exists(self.target_addon):
+                    if self.target_addon and os.path.exists(self.target_addon):
                         print "*** Removing target add-on '%s'." % self.target_addon
                         os.remove(self.target_addon)
                 except:
