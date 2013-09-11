@@ -35,8 +35,8 @@ MOZMILL_TESTS_REPOSITORIES = {
 class TestRun(object):
     """Base class to execute a Mozmill test-run"""
 
-    def __init__(self, args=sys.argv[1:], debug=False, repository_path=None,
-                 manifest_path=None, timeout=None):
+    def __init__(self, args=sys.argv[1:], debug=False, manifest_path=None,
+                 timeout=None):
 
         usage = "usage: %prog [options] binary"
         parser = optparse.OptionParser(usage=usage)
@@ -49,18 +49,15 @@ class TestRun(object):
         self.binary = self.args[0]
         self.debug = debug
         self.timeout = timeout
-        self.repository_path = repository_path
         self.manifest_path = manifest_path
         self.persisted = {}
 
         # default listeners
         self.listeners = [(self.graphics_event, 'mozmill.graphics')]
 
-        if self.options.repository_url:
-            self.repository_url = self.options.repository_url
-        else:
-            self.repository_url = MOZMILL_TESTS_REPOSITORIES[self.options.application]
-        self._repository = None
+        url = self.options.repository_url if self.options.repository_url \
+            else MOZMILL_TESTS_REPOSITORIES[self.options.application]
+        self.repository = repository.MercurialRepository(url)
 
         self.addon_list = []
         self.downloaded_addons = []
@@ -182,7 +179,7 @@ class TestRun(object):
     def run_tests(self):
         """ Start the execution of the tests. """
         manifest = manifestparser.TestManifest(
-            manifests=[os.path.join(self.repository_path, self.manifest_path)],
+            manifests=[os.path.join(self.repository.path, self.manifest_path)],
             strict=False)
 
         tests = manifest.active_tests(**mozinfo.info)
@@ -248,16 +245,16 @@ class TestRun(object):
 
             # XXX: mktemp is marked as deprecated but lets use it because with
             # older versions of Mercurial the target folder should not exist.
-            print "Preparing mozmill-tests repository..."
-            self.repository_path = tempfile.mktemp(".mozmill-tests")
-            self._repository = repository.Repository(self.repository_url,
-                                                     self.repository_path)
-            self._repository.clone()
+            path = tempfile.mktemp(".mozmill-tests")
+            print "*** Cloning test repository to '%s'" % path
+            self.repository.clone(path)
 
             # Update the mozmill-test repository to match the Gecko branch
-            repository_url = ini.get('App', 'SourceRepository')
-            branch_name = self._repository.identify_branch(repository_url)
-            self._repository.update(branch_name)
+            app_repository_url = ini.get('App', 'SourceRepository')
+            branch_name = application.get_mozmill_tests_branch(app_repository_url)
+
+            print "*** Updating branch of test repository to '%s'" % branch_name
+            self.repository.update(branch_name)
 
             if self.options.addons:
                 self.prepare_addons()
@@ -283,8 +280,8 @@ class TestRun(object):
             self.remove_downloaded_addons()
 
             # Remove the temporarily cloned repository
-            if self._repository:
-                self._repository.remove()
+            print "*** Removing test repository '%s'" % self.repository.path
+            self.repository.remove()
 
             # If a test has been failed ensure that we exit with status 2
             if self.last_failed_tests:
@@ -322,7 +319,7 @@ class AddonsTestRun(TestRun):
     def get_all_addons(self):
         """ Retrieves all add-ons inside the "addons" folder. """
 
-        path = os.path.join(self.repository_path, "tests", "addons")
+        path = os.path.join(self.repository.path, "tests", "addons")
         return [entry for entry in os.listdir(path)
                       if os.path.isdir(os.path.join(path, entry))]
 
@@ -342,7 +339,7 @@ class AddonsTestRun(TestRun):
             platform = None
 
         try:
-            filename = os.path.join(self.repository_path, self._addon_path, "addon.ini")
+            filename = os.path.join(self.repository.path, self._addon_path, "addon.ini")
             config = ConfigParser.RawConfigParser()
             config.read(filename)
 
