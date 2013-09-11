@@ -12,7 +12,7 @@ except IOError:
     description = None
 
 NAME = 'mozmill-automation'
-VERSION = '2.0rc5'
+VERSION = '2.0rc5.1'
 
 deps = ['mercurial == 2.6.2',
         'mozinstall == 1.7',
