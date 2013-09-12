@@ -65,6 +65,9 @@ class TestRun(object):
         self.testrun_index = 0
 
         self.last_failed_tests = None
+        self.exception_type = None
+        self.exception = None
+        self.tb = None
 
     def _get_binary(self):
         """ Returns the binary to test. """
@@ -303,8 +306,7 @@ class TestRun(object):
             self.run_tests()
 
         except Exception, e:
-            exception_type, exception, tb = sys.exc_info()
-            traceback.print_exception(exception_type, exception, tb)
+            self.exception_type, self.exception, self.tb = sys.exc_info()
 
         finally:
             # Remove the build when it has been installed before
@@ -317,6 +319,12 @@ class TestRun(object):
             # Remove the temporarily cloned repository
             print "*** Removing test repository '%s'" % self.repository.path
             self.repository.remove()
+
+            # If an exception has been thrown, print it here and exit with status 3.
+            # Giving that we save reports with failing tests, this one has priority
+            if self.exception_type:
+                traceback.print_exception(self.exception_type, self.exception, self.tb)
+                raise errors.TestrunAbortedException(self)
 
             # If a test has been failed ensure that we exit with status 2
             if self.last_failed_tests:
@@ -412,37 +420,18 @@ class AddonsTestRun(TestRun):
                 # Download the add-on
                 self.target_addon = self.download_addon(url, tempfile.gettempdir())
 
-                # Run normal tests if some exist
-                try:
-                    self.manifest_path = os.path.join(self._addon_path,
-                                                      'tests', 'manifest.ini')
-                    self.restart_tests = False
-                    self.addon_list.append(self.target_addon)
-                    TestRun.run_tests(self)
-                except Exception, e:
-                    print str(e)
-                    self.last_exception = e
-                finally:
-                    self.addon_list.remove(self.target_addon)
-
-                # Run restart tests if some exist
-                try:
-                    self.manifest_path = os.path.join(self._addon_path,
-                                                      'restartTests', 'manifest.ini')
-                    self.restart_tests = True
-                    self.addon_list.append(self.target_addon)
-                    TestRun.run_tests(self)
-                except Exception, e:
-                    print str(e)
-                    self.last_exception = e
-                finally:
-                    self.addon_list.remove(self.target_addon)
+                self.manifest_path = os.path.join(self._addon_path,
+                                                  'tests', 'manifest.ini')
+                self.addon_list.append(self.target_addon)
+                TestRun.run_tests(self)
 
             except Exception, e:
                 print str(e)
-                self.last_exception = e
+                self.exception_type, self.exception, self.tb = sys.exc_info()
+
             finally:
                 if self.target_addon:
+                    self.addon_list.remove(self.target_addon)
                     try:
                         # Remove downloaded add-on
                         if os.path.exists(self.target_addon):
@@ -697,7 +686,7 @@ class UpdateTestRun(TestRun):
                 shutil.rmtree(path)
             except Exception, e:
                 print "Failed to remove the update staging folder: " + str(e)
-                self.last_exception = e
+                self.exception_type, self.exception, self.tb = sys.exc_info()
 
 
 def exec_testrun(cls):
@@ -705,7 +694,8 @@ def exec_testrun(cls):
         cls().run()
     except errors.TestFailedException:
         sys.exit(2)
-
+    except errors.TestrunAbortedException:
+        sys.exit(3)
 
 def addons_cli():
     exec_testrun(AddonsTestRun)

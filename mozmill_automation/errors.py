@@ -22,3 +22,8 @@ class TestFailedException(Exception):
     """ Exception for failed tests. """
     def __init__(self):
         Exception.__init__(self, "Some tests have failed.")
+
+class TestrunAbortedException(Exception):
+    """ Exception for aborted testrun. """
+    def __init__(self, testrun):
+        Exception.__init__(self, "Testrun aborted: %s" % testrun.__class__.__name__)
