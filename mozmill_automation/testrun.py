@@ -149,11 +149,23 @@ class TestRun(object):
                                    type="string",
                                    metavar="PATH",
                                    help="Profile path")
+        mozmill_options.add_option("--console-level",
+                                   choices=['INFO', 'ERRORS', 'DEBUG'],
+                                   default="INFO",
+                                   type="choice",
+                                   metavar="CONSOLE_LEVEL",
+                                   help="Level of console logging (default: %default)")
         self.parser.add_option_group(mozmill_options)
 
         (self.options, self.args) = self.parser.parse_args(args)
         # Consume the system arguments
         del sys.argv[1:]
+
+        # Set mozmill logging level
+        if self.options.console_level == 'ERRORS':
+            self.mozmill_args.append('--show-errors')
+        elif self.options.console_level == 'DEBUG':
+            self.mozmill_args.append('--show-all')
 
         # Add Mozmill arguments
         sys.argv.extend(self.mozmill_args)
@@ -340,7 +352,6 @@ class TestRun(object):
         self._mozmill.addons = self.addon_list
         self._mozmill.options.debug = self.debug
         self._mozmill.options.binary = self._application
-        self._mozmill.options.showall = True
         self._mozmill.tests = [os.path.join(self.repository.path, self.test_path)]
 
         if self.timeout:
