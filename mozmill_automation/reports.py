@@ -42,8 +42,8 @@ class DashboardReport(Report):
 
         report['report_type'] = self.testrun.report_type
         report['report_version'] = self.testrun.report_version
-        report['tests_repository'] = self.testrun._repository.url
-        report['tests_changeset'] = self.testrun._repository.changeset
+        report['tests_repository'] = self.testrun.repository.url
+        report['tests_changeset'] = self.testrun.repository.changeset
         report['tags'] = self.testrun.options.tags or [ ]
 
         # Include graphic card related information if present
