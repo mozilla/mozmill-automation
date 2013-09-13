@@ -38,13 +38,14 @@ class TestRun(object):
     def __init__(self, args=sys.argv[1:], debug=False, manifest_path=None,
                  timeout=None):
 
-        usage = "usage: %prog [options] binary"
+        usage = "usage: %prog [options] (binary|folder)"
         parser = optparse.OptionParser(usage=usage)
         self.add_options(parser)
         self.options, self.args = parser.parse_args(args)
 
         if len(self.args) != 1:
-            parser.error("Exactly one binary has to be specified.")
+            parser.error("Exactly one binary or a folder containing a single " \
+                " binary has to be specified.")
 
         self.binary = self.args[0]
         self.debug = debug
@@ -64,6 +65,40 @@ class TestRun(object):
         self.testrun_index = 0
 
         self.last_failed_tests = None
+
+    def _get_binary(self):
+        """ Returns the binary to test. """
+        return self._binary
+
+    def _set_binary(self, build):
+        """ Sets the list of binaries to test. """
+        self._binary = None
+
+        build = os.path.abspath(build)
+
+        if not os.path.exists(build):
+            raise errors.NotFoundException('Path cannot be found', build)
+
+        # Check if it's an installer or an already installed build
+        # We have to custom checks via application.is_app_folder as long as
+        # mozinstall can't check for an installer (bug 795288)
+        if application.is_installer(build, self.options.application) or \
+                application.is_app_folder(build):
+            self._binary = build
+            return
+
+        # Otherwise recursivily scan the folder and select the first found build
+        for root, dirs, files in os.walk(build):
+            # Ensure we select the build by alphabetical order
+            files.sort()
+
+            for f in files:
+                if not f in [".DS_Store"] and \
+                        application.is_installer(f, self.options.application):
+                    self._binary = os.path.abspath(os.path.join(root, f))
+                    return
+
+    binary = property(_get_binary, _set_binary, None)
 
     def add_options(self, parser):
         """add options to the parser"""
@@ -142,10 +177,10 @@ class TestRun(object):
 
     def prepare_application(self, binary):
         # Prepare the binary for the test run
-        if mozinstall.is_installer(self.binary):
+        if application.is_installer(self.binary, self.options.application):
             install_path = tempfile.mkdtemp(".binary")
 
-            print "Install build: %s" % self.binary
+            print "*** Installing build: %s" % self.binary
             self._folder = mozinstall.install(self.binary, install_path)
             self._application = mozinstall.get_binary(self._folder,
                                                       self.options.application)
@@ -273,8 +308,8 @@ class TestRun(object):
 
         finally:
             # Remove the build when it has been installed before
-            if mozinstall.is_installer(self.binary):
-                print "Uninstall build: %s" % self._folder
+            if application.is_installer(self.binary, self.options.application):
+                print "*** Uninstalling build: %s" % self._folder
                 mozinstall.uninstall(self._folder)
 
             self.remove_downloaded_addons()
