@@ -1,3 +1,8 @@
+2.0rc5.4 / 2013-09-13
+=====================
+
+  * Fix broken report generation due to Mercurial changes (#57)
+
 2.0rc5.3 / 2013-09-12
 =====================
 
