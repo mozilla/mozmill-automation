@@ -1,7 +1,7 @@
 {
   "settings": {
     "addons_per_run": 5,
-    "builds": ["10.0b6", "10.0.2", "10.0.3esr"],
+    "builds": ["24.0esr"],
     "staging_path": "_staging",
     "testrun_options": [
       "--report=http://mozmill-addons.blargon7.com/db/",
