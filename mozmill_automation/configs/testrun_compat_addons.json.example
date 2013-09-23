@@ -20,9 +20,6 @@
       "amo_id": 13661,
       "platforms": ["winnt", "darwin", "linux"]
     }, {
-      "name": "Google Toolbar",
-      "url": "https://dl-ssl.google.com/firefox/google-toolbar-beta-win-h_asknot-d_asknot.xpi"
-    }, {
       "name": "Firebug",
       "url": "http://addons.mozilla.org/firefox/downloads/latest/1843/addon-1843-latest.xpi",
       "amo_id": 1843
