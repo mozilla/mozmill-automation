@@ -12,12 +12,12 @@ except IOError:
     description = None
 
 NAME = 'mozmill-automation'
-VERSION = '1.5.23'
+VERSION = '1.5.24'
 
 DEPS = [
         'mercurial==2.6.2',
         'mozdownload==1.9',
-        'mozmill==1.5.23'
+        'mozmill==1.5.24'
         ]
 
 setup(name=NAME,
