@@ -82,7 +82,7 @@ class TestRun(object):
                                                 help="Add-ons to install",
                                                ),
                       ("--application",): dict(dest="application",
-                                               choices=["firefox", "metrofirefox", "thunderbird"],
+                                               choices=["firefox", "thunderbird"],
                                                metavar="APP",
                                                default="firefox",
                                                help="Application Name, i.e. firefox, thunderbird"),
