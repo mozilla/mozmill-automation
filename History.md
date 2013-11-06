@@ -1,3 +1,9 @@
+1.5.24.1 / 2013-11-06
+=====================
+
+  * Remove metrofirefox from supported apps (#89)
+  * Add support for other application testruns (#89)
+
 1.5.24 / 2013-10-15
 ===================
 
