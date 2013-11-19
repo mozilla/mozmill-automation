@@ -60,6 +60,15 @@ class TestRun(object):
         self.manifest_path = manifest_path
         self.persisted = {}
 
+        if self.options.workspace:
+            path = os.path.expanduser(self.options.workspace)
+            self.workspace = os.path.abspath(path)
+
+            if not os.path.exists(self.workspace):
+                os.makedirs(self.workspace)
+        else:
+            self.workspace = tempfile.mkdtemp('.workspace')
+
         # default listeners
         self.listeners = [(self.graphics_event, 'mozmill.graphics')]
 
@@ -140,25 +149,22 @@ class TestRun(object):
                           default=False,
                           action="store_true",
                           help="restart the application between tests")
-        parser.add_option("--screenshot-path",
-                          dest="screenshot_path",
-                          metavar="PATH",
-                          help="path to use for screenshots")
         parser.add_option("--tag",
                           dest="tags",
                           action="append",
                           metavar="TAG",
                           help="Tag to apply to the report")
+        parser.add_option("--workspace",
+                          dest="workspace",
+                          metavar="PATH",
+                          help="path to the workspace folder, which contains "
+                               "the testrun data [default: %tmp%]")
 
         mozmill = optparse.OptionGroup(parser, "Mozmill options")
         mozmill.add_option("-l", "--logfile",
                           dest="logfile",
                           metavar="PATH",
                           help="path to log file")
-        mozmill.add_option('-p', "--profile",
-                          dest="profile",
-                          metavar="PATH",
-                          help="path to the profile")
         parser.add_option_group(mozmill)
 
     def download_addon(self, url, target_path):
@@ -203,7 +209,7 @@ class TestRun(object):
     def prepare_application(self, binary):
         # Prepare the binary for the test run
         if application.is_installer(self.binary, self.options.application):
-            install_path = tempfile.mkdtemp(".binary")
+            install_path = os.path.join(self.workspace, 'binary')
 
             print "*** Installing build: %s" % self.binary
             self._folder = mozinstall.install(self.binary, install_path)
@@ -266,7 +272,11 @@ class TestRun(object):
             handlers.append(self.junit_report)
 
         # instantiate MozMill
-        profile_args = dict(addons=self.addon_list)
+        profile_path = os.path.join(self.workspace, 'profile')
+        print '*** Creating profile: %s' % profile_path
+
+        profile_args = dict(profile=profile_path,
+                            addons=self.addon_list)
         runner_args = dict(binary=self._application)
         mozmill_args = dict(app=self.options.application,
                             handlers=handlers,
@@ -282,9 +292,13 @@ class TestRun(object):
             self._mozmill.add_listener(listener[0], eventType=listener[1])
 
         self._mozmill.persisted.update(self.persisted)
-        self._mozmill.run(tests, self.options.restart)
+        try:
+            self._mozmill.run(tests, self.options.restart)
+        finally:
+            self.results = self._mozmill.finish()
 
-        self.results = self._mozmill.finish()
+            print "*** Removing profile: %s" % profile_path
+            shutil.rmtree(profile_path)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
         self.last_failed_tests = self.last_failed_tests or self.results.fails
@@ -298,9 +312,10 @@ class TestRun(object):
             self.prepare_application(self.binary)
 
             ini = application.ApplicationIni(self._application)
-            print '*** Application: %s %s' % (
+            print '*** Application: %s %s (%s)' % (
                 ini.get('App', 'Name'),
-                ini.get('App', 'Version'))
+                ini.get('App', 'Version'),
+                self._application)
 
             # Print platform details
             print '*** Platform: %s %s %sbit' % (
@@ -308,9 +323,7 @@ class TestRun(object):
                 mozinfo.version,
                 mozinfo.bits)
 
-            # XXX: mktemp is marked as deprecated but lets use it because with
-            # older versions of Mercurial the target folder should not exist.
-            path = tempfile.mktemp(".mozmill-tests")
+            path = os.path.join(self.workspace, 'mozmill-tests')
             print "*** Cloning test repository to '%s'" % path
             self.repository.clone(path)
 
@@ -324,11 +337,10 @@ class TestRun(object):
             if self.options.addons:
                 self.prepare_addons()
 
-            if self.options.screenshot_path:
-                path = os.path.abspath(self.options.screenshot_path)
-                if not os.path.isdir(path):
-                    os.makedirs(path)
-                self.persisted["screenshotPath"] = path
+            path = os.path.join(self.workspace, 'screenshots')
+            if not os.path.isdir(path):
+                os.makedirs(path)
+            self.persisted["screenshotPath"] = path
 
             self.run_tests()
 
@@ -642,10 +654,10 @@ class UpdateTestRun(TestRun):
         # If a fallback update has to be performed, create a second copy
         # of the application to avoid running the installer twice
         if not self.options.no_fallback:
-            self._backup_folder = tempfile.mkdtemp(".binary_backup")
+            self._backup_folder = os.path.join(self.workspace, 'binary_backup')
 
-            print "Create backup: %s" % self._backup_folder
-            shutil.rmtree(self._backup_folder)
+            print "*** Creating backup of binary: %s" % self._backup_folder
+            shutil.rmtree(self._backup_folder, True)
             shutil.copytree(self._folder, self._backup_folder)
 
     def prepare_channel(self):
@@ -708,7 +720,7 @@ class UpdateTestRun(TestRun):
         finally:
             try:
                 path = self._mozmill.persisted["updateStagingPath"]
-                print "Remove updates staging folder: %s" % path
+                print "*** Removing updates staging folder: %s" % path
                 shutil.rmtree(path)
             except Exception, e:
                 print "Failed to remove the update staging folder: " + str(e)
