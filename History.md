@@ -1,5 +1,14 @@
+2.0.1 / 2013-11-21
+==================
+
+  * Add workspace folder option for testrun related data (#80)
+  * Bump mozdownload to 1.10 and mozmill to 2.0.1 (#102)
+  * Add support for other application testruns (#89)
+  * Correct detection of remote repository name to not delete CWD in case of failures (#99)
+  * Automation scripts should correctly handle exceptions (Bug 853005)
+
 2.0 / 2013-09-24
-===================
+================
 
   * Upgrade to Mozmill 2.0 (#84)
 
