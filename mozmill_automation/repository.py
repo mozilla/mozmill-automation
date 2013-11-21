@@ -6,6 +6,7 @@ import mozinfo
 import os
 import re
 import shutil
+import urlparse
 
 import process
 
@@ -28,7 +29,8 @@ class MercurialRepository(object):
         else:
             # If no local path has been specified we generate it from the
             # current working directory and the name of the remote repository
-            self.path = os.path.join(os.getcwd(), os.path.basename(url))
+            name = urlparse.urlparse(self.url).path.rstrip('/').rsplit('/')[-1]
+            self.path = os.path.join(os.getcwd(), name)
 
     def _exec(self, arguments, is_cloning=False):
         """Execute the given hg command and return the output"""
