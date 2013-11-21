@@ -28,7 +28,14 @@ import repository
 
 MOZMILL_TESTS_REPOSITORIES = {
     'firefox' : "http://hg.mozilla.org/qa/mozmill-tests",
+    'metrofirefox' : "http://hg.mozilla.org/qa/mozmill-tests",
     'thunderbird' : "http://hg.mozilla.org/users/bugzilla_standard8.plus.com/qa-tests/",
+}
+
+APPLICATION_BINARY_NAMES = {
+    'firefox' : "firefox",
+    'metrofirefox' : "firefox",
+    'thunderbird' : "thunderbird",
 }
 
 
@@ -113,7 +120,7 @@ class TestRun(object):
         parser.add_option("--application",
                           dest="application",
                           default="firefox",
-                          choices=["firefox", "thunderbird"],
+                          choices=APPLICATION_BINARY_NAMES.keys(),
                           metavar="APPLICATION",
                           help="application name [default: %default]")
         parser.add_option("--junit",
@@ -167,6 +174,21 @@ class TestRun(object):
         except Exception, e:
             print e
 
+    def get_tests_folder(self, *args):
+        """ Getting the correct tests path for the testrun. """
+
+        app_path = os.path.join(self.repository.path, self.options.application)
+        if os.path.isdir(app_path):
+            # Check if the application supports this testrun
+            path = os.path.join(app_path, 'tests', self.type, *args)
+            if not os.path.isdir(path):
+                raise errors.NotSupportedTestrunException(self)
+        # TODO: Remove this else block once we get the new repository structure landed
+        else:
+            path = os.path.join(self.repository.path, 'tests', self.type, *args)
+
+        return path
+
     def prepare_addons(self):
         """ Prepare the addons for the test run. """
 
@@ -198,8 +220,9 @@ class TestRun(object):
                 else:
                     self._folder = os.path.dirname(self.binary)
 
+            binary_name = APPLICATION_BINARY_NAMES[self.options.application]
             self._application = mozinstall.get_binary(self._folder,
-                                                      self.options.application)
+                                                      binary_name)
 
     def graphics_event(self, obj):
         if not self.graphics:
@@ -213,6 +236,10 @@ class TestRun(object):
                 os.remove(path)
             except:
                 print "*** Failed to remove downloaded add-on '%s'." % path
+
+    @property
+    def report_type(self):
+        return self.options.application + '-' + self.type
 
     def run_tests(self):
         """ Start the execution of the tests. """
@@ -334,7 +361,7 @@ class TestRun(object):
 class AddonsTestRun(TestRun):
     """Class to execute an add-ons test-run"""
 
-    report_type = "firefox-addons"
+    type = "addons"
     report_version = "1.0"
 
     def __init__(self, *args, **kwargs):
@@ -362,7 +389,7 @@ class AddonsTestRun(TestRun):
     def get_all_addons(self):
         """ Retrieves all add-ons inside the "addons" folder. """
 
-        path = os.path.join(self.repository.path, "tests", "addons")
+        path = self.get_tests_folder()
         return [entry for entry in os.listdir(path)
                       if os.path.isdir(os.path.join(path, entry))]
 
@@ -403,7 +430,7 @@ class AddonsTestRun(TestRun):
                 self.target_addon = None
 
                 # Get the download URL
-                self._addon_path = os.path.join('tests', 'addons', addon)
+                self._addon_path = self.get_tests_folder(addon)
 
                 try:
                     url = self.get_download_url()
@@ -444,7 +471,7 @@ class AddonsTestRun(TestRun):
 class EnduranceTestRun(TestRun):
     """Class to execute an endurance test-run"""
 
-    report_type = "firefox-endurance"
+    type = "endurance"
     report_version = "1.2"
 
     def __init__(self, *args, **kwargs):
@@ -509,7 +536,7 @@ class EnduranceTestRun(TestRun):
                                        'entities': self.options.entities,
                                        'restart': self.options.restart}
 
-        self.manifest_path = os.path.join('tests', 'endurance')
+        self.manifest_path = self.get_tests_folder()
         if not self.options.reserved:
             self.manifest_path = os.path.join(self.manifest_path,
                                               "manifest.ini")
@@ -523,7 +550,7 @@ class EnduranceTestRun(TestRun):
 class FunctionalTestRun(TestRun):
     """Class to execute a functional test-run"""
 
-    report_type = "firefox-functional"
+    type = "functional"
     report_version = "2.0"
 
     def __init__(self, *args, **kwargs):
@@ -532,16 +559,16 @@ class FunctionalTestRun(TestRun):
     def run_tests(self):
         """ Execute the functional tests. """
 
-        self.manifest_path = os.path.join('tests',
-                                          'functional',
-                                          'manifest.ini')
+        tests_path = self.get_tests_folder()
+        self.manifest_path = os.path.join(tests_path, "manifest.ini")
+
         TestRun.run_tests(self)
 
 
 class L10nTestRun(TestRun):
     """Class to execute a l10n test-run"""
 
-    report_type = "firefox-l10n"
+    type = "l10n"
     report_version = "1.0"
 
     def __init__(self, *args, **kwargs):
@@ -550,16 +577,16 @@ class L10nTestRun(TestRun):
     def run_tests(self):
         """ Execute the existent l10n tests in sequence. """
 
-        self.manifest_path = os.path.join('tests',
-                                          'l10n',
-                                          'manifest.ini')
+        tests_path = self.get_tests_folder()
+        self.manifest_path = os.path.join(tests_path, "manifest.ini")
+
         TestRun.run_tests(self)
 
 
 class RemoteTestRun(TestRun):
     """Class to execute a remote testrun"""
 
-    report_type = "firefox-remote"
+    type = "remote"
     report_version = "1.0"
 
     def __init__(self, *args, **kwargs):
@@ -568,16 +595,16 @@ class RemoteTestRun(TestRun):
     def run_tests(self):
         """ Execute the normal and restart tests in sequence. """
 
-        self.manifest_path = os.path.join('tests',
-                                          'remote',
-                                          'manifest.ini')
+        tests_path = self.get_tests_folder()
+        self.manifest_path = os.path.join(tests_path, "manifest.ini")
+
         TestRun.run_tests(self)
 
 
 class UpdateTestRun(TestRun):
     """Class to execute a software update testrun"""
 
-    report_type = "firefox-update"
+    type = "update"
     report_version = "1.0"
 
     def __init__(self, *args, **kwargs):
@@ -672,10 +699,9 @@ class UpdateTestRun(TestRun):
     def run_update_tests(self, is_fallback):
         try:
             type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
-            self.manifest_path = os.path.join('tests',
-                                              'update',
-                                              type,
-                                              'manifest.ini')
+            tests_path = self.get_tests_folder()
+            self.manifest_path = os.path.join(tests_path, type, "manifest.ini")
+
             TestRun.run_tests(self)
         except Exception, e:
             print "Execution of test-run aborted: %s" % str(e)
@@ -696,6 +722,8 @@ def exec_testrun(cls):
         sys.exit(2)
     except errors.TestrunAbortedException:
         sys.exit(3)
+    except errors.NotSupportedTestrunException:
+        sys.exit(4)
 
 def addons_cli():
     exec_testrun(AddonsTestRun)

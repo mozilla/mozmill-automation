@@ -17,6 +17,11 @@ class NotFoundException(Exception):
         self.location = location
         Exception.__init__(self, ': '.join([message, location]))
 
+class NotSupportedTestrunException(Exception):
+    """Class for a testrun not being supported exception."""
+
+    def __init__(self, testrun):
+        Exception.__init__(self, 'Testrun not supported: %s' % testrun.__class__.__name__)
 
 class TestFailedException(Exception):
     """ Exception for failed tests. """
