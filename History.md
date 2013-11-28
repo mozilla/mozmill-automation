@@ -1,3 +1,8 @@
+2.0.1.1 / 2013-11-28
+====================
+
+  * Fallback update tests are failing for non-default update channels (#105)
+
 2.0.1 / 2013-11-21
 ==================
 
