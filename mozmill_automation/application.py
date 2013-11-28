@@ -105,8 +105,6 @@ class UpdateChannel(object):
     def _set_channel(self, value):
         """ Sets the update channel. """
 
-        print "Setting update channel to '%s'..." % value
-
         try:
             file = open(self.channel_prefs_path, "r")
         except IOError:

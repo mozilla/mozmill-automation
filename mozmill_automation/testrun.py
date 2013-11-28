@@ -173,7 +173,7 @@ class TestRun(object):
             filename = url.split('?')[0].rstrip('/').rsplit('/', 1)[-1]
             target_path = os.path.join(target_path, filename)
 
-            print "Downloading %s to %s" % (url, target_path)
+            print "*** Downloading %s to %s" % (url, target_path)
             urllib.urlretrieve(url, target_path)
 
             return target_path
@@ -669,6 +669,8 @@ class UpdateTestRun(TestRun):
             update_channel.channel = self.options.channel
             self.channel = self.options.channel
 
+        print "*** Setting update channel to '%s'..." % self.channel
+
     def restore_application(self):
         """ Restores the backup of the application binary. """
         timeout = time.time() + 15
@@ -692,12 +694,6 @@ class UpdateTestRun(TestRun):
     def run_tests(self):
         """ Start the execution of the tests. """
 
-        self.prepare_channel()
-
-        self.persisted["channel"] = self.channel
-        if self.options.target_buildid:
-            self.persisted["targetBuildID"] = self.options.target_buildid
-
         # Run direct update test
         self.run_update_tests(False)
 
@@ -709,6 +705,12 @@ class UpdateTestRun(TestRun):
             self.run_update_tests(True)
 
     def run_update_tests(self, is_fallback):
+        self.prepare_channel()
+
+        self.persisted["channel"] = self.channel
+        if self.options.target_buildid:
+            self.persisted["targetBuildID"] = self.options.target_buildid
+
         try:
             type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
             tests_path = self.get_tests_folder()
@@ -716,14 +718,14 @@ class UpdateTestRun(TestRun):
 
             TestRun.run_tests(self)
         except Exception, e:
-            print "Execution of test-run aborted: %s" % str(e)
+            print "*** Execution of test-run aborted: %s" % str(e)
         finally:
             try:
                 path = self._mozmill.persisted["updateStagingPath"]
                 print "*** Removing updates staging folder: %s" % path
                 shutil.rmtree(path)
             except Exception, e:
-                print "Failed to remove the update staging folder: " + str(e)
+                print "*** Failed to remove the update staging folder: " + str(e)
                 self.exception_type, self.exception, self.tb = sys.exc_info()
 
 
