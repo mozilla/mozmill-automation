@@ -170,6 +170,9 @@ class TestRun(object):
     def download_addon(self, url, target_path):
         """ Download the XPI file. """
         try:
+            if not os.path.exists(target_path):
+                os.makedirs(target_path)
+
             filename = url.split('?')[0].rstrip('/').rsplit('/', 1)[-1]
             target_path = os.path.join(target_path, filename)
 
@@ -450,7 +453,8 @@ class AddonsTestRun(TestRun):
                     continue
 
                 # Download the add-on
-                self.target_addon = self.download_addon(url, tempfile.gettempdir())
+                self.target_addon = self.download_addon(url,
+                                                        os.path.join(self.workspace, 'addons'))
 
                 self.manifest_path = os.path.join(self._addon_path,
                                                   'tests', 'manifest.ini')
