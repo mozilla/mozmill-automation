@@ -219,7 +219,7 @@ class TestRun(object):
             if os.path.isdir(self.binary):
                 self._folder = self.binary
             else:
-                if sys.platform == "darwin":
+                if mozinfo.isMac:
                     # Ensure that self._folder is the app bundle on OS X
                     p = re.compile('.*\.app/')
                     self._folder = p.search(self.binary).group()
@@ -410,20 +410,13 @@ class AddonsTestRun(TestRun):
 
         filename = None
 
-        # Get the platform the script is running on
-        if sys.platform in ("cygwin", "win32"):
-            platform = "win"
-        elif sys.platform in ("darwin"):
-            platform = "mac"
-        elif sys.platform in ("linux2", "sunos5"):
-            platform = "linux"
-        else:
-            platform = None
-
         try:
             filename = os.path.join(self.repository.path, self._addon_path, "addon.ini")
             config = ConfigParser.RawConfigParser()
             config.read(filename)
+
+            # Get the platform to download platform specific add-ons
+            platform = 'linux' if mozinfo.os in ['bsd', 'unix'] else mozinfo.os
 
             return config.get("download", platform)
         except Exception, e:
