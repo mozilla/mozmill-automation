@@ -1,3 +1,10 @@
+2.0.2 / 2013-12-11
+==================
+
+  * Upgrade to Mozmill 2.0.2 to make use of mozfile.remove() for removing files and directories (#113)
+  * Download target add-on for addon testrun into workspace (#110)
+  * Replace sys.platform with mozinfo.os checks (#25)
+
 2.0.1.1 / 2013-11-28
 ====================
 
