@@ -14,6 +14,7 @@ import traceback
 import urllib
 
 import manifestparser
+import mozfile
 import mozinfo
 import mozinstall
 import mozmill
@@ -242,7 +243,7 @@ class TestRun(object):
             try:
                 # Remove downloaded add-on
                 print "*** Removing downloaded add-on '%s'." % path
-                os.remove(path)
+                mozfile.remove(path)
             except:
                 print "*** Failed to remove downloaded add-on '%s'." % path
 
@@ -301,7 +302,7 @@ class TestRun(object):
             self.results = self._mozmill.finish()
 
             print "*** Removing profile: %s" % profile_path
-            shutil.rmtree(profile_path)
+            mozfile.remove(profile_path)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
         self.last_failed_tests = self.last_failed_tests or self.results.fails
@@ -469,10 +470,8 @@ class AddonsTestRun(TestRun):
                 if self.target_addon:
                     self.addon_list.remove(self.target_addon)
                     try:
-                        # Remove downloaded add-on
-                        if os.path.exists(self.target_addon):
-                            print "*** Removing target add-on '%s'." % self.target_addon
-                            os.remove(self.target_addon)
+                        print "*** Removing target add-on '%s'." % self.target_addon
+                        mozfile.remove(self.target_addon)
                     except:
                         print "*** Failed to remove target add-on '%s'." % self.target_addon
 
@@ -654,7 +653,7 @@ class UpdateTestRun(TestRun):
             self._backup_folder = os.path.join(self.workspace, 'binary_backup')
 
             print "*** Creating backup of binary: %s" % self._backup_folder
-            shutil.rmtree(self._backup_folder, True)
+            mozfile.remove(self._backup_folder, True)
             shutil.copytree(self._folder, self._backup_folder)
 
     def prepare_channel(self):
@@ -675,7 +674,7 @@ class UpdateTestRun(TestRun):
         print "*** Removing binary at '%s'" % self._folder
         while True:
             try:
-                shutil.rmtree(self._folder)
+                mozfile.remove(self._folder)
                 break
             except Exception, e:
                 print str(e)
@@ -720,7 +719,7 @@ class UpdateTestRun(TestRun):
             try:
                 path = self._mozmill.persisted["updateStagingPath"]
                 print "*** Removing updates staging folder: %s" % path
-                shutil.rmtree(path)
+                mozfile.remove(path)
             except Exception, e:
                 print "*** Failed to remove the update staging folder: " + str(e)
                 self.exception_type, self.exception, self.tb = sys.exc_info()
