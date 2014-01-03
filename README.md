@@ -61,4 +61,4 @@ channel. The valid update channels are:
 * releasetest
 * esr
 * esrtest
-* esr[VERSION]-nightly (for example esr17-nightly)
+* esr[VERSION]-nightly (for example esr24-nightly)
