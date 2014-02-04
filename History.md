@@ -1,7 +1,7 @@
 2.0.4 / 2014-02-04
 ==================
 
-  * Upgrade to Mozmill 2.0.4 and mozdownload 1.11 (#122)
+  * Upgrade to Mozmill 2.0.4 and mozdownload 1.11.1 (#122)
 
 2.0.3 / 2013-12-20
 ==================
