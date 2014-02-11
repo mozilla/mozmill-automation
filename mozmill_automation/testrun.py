@@ -217,8 +217,10 @@ class TestRun(object):
 
             print "*** Installing build: %s" % self.binary
             self._folder = mozinstall.install(self.binary, install_path)
+
+            binary_name = APPLICATION_BINARY_NAMES[self.options.application]
             self._application = mozinstall.get_binary(self._folder,
-                                                      self.options.application)
+                                                      binary_name)
         else:
             if os.path.isdir(self.binary):
                 self._folder = self.binary
