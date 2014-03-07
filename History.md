@@ -1,3 +1,9 @@
+2.0.6 / 2014-03-07
+==================
+
+ * Release version 2.0.6 and bump to Mozmill 2.0.6 (#128)
+ * Use APPLICATION_BINARY_NAMES map for getting the correct binary (#125)
+
 2.0.5 / 2014-02-10
 ==================
 
