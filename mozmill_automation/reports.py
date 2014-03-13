@@ -130,27 +130,29 @@ class JUnitReport(Report):
         testsuite_element.setAttribute('time', str((time_end - time_start).seconds))
 
         for result in report['results']:
-            filename = result['filename']
-            root_path = '/'.join(['tests', report_type.split('firefox-')[1]])
+            class_name = 'undefined'
+            if 'filename' in result:
+                filename = result['filename']
+                root_path = '/'.join(['tests', report_type.split('firefox-')[1]])
 
-            # replace backslashes with forward slashes
-            filename = filename.replace('\\', '/')
+                # replace backslashes with forward slashes
+                filename = filename.replace('\\', '/')
 
-            # strip temporary and common path elements, and strip trailing forward slash
-            class_name = filename.partition(root_path)[2].lstrip('/')
+                # strip temporary and common path elements, and strip trailing forward slash
+                class_name = filename.partition(root_path)[2].lstrip('/')
 
-            # strip the file extension
-            class_name = os.path.splitext(class_name)[0]
+                # strip the file extension
+                class_name = os.path.splitext(class_name)[0]
 
-            # replace periods with underscore to avoid them being interpreted as package seperators
-            class_name = class_name.replace('.', '_')
+                # replace periods with underscore to avoid them being interpreted as package seperators
+                class_name = class_name.replace('.', '_')
 
-            # replace path separators with periods to give implied package hierarchy
-            class_name = class_name.replace('/', '.')
+                # replace path separators with periods to give implied package hierarchy
+                class_name = class_name.replace('/', '.')
 
             testcase_element = doc.createElement('testcase')
             testcase_element.setAttribute('classname', str(class_name))
-            testcase_element.setAttribute('name', str(result['name']).rpartition('::')[2])
+            testcase_element.setAttribute('name', str(result.get('name', 'undefined')).rpartition('::')[2])
 
             time = '0'
             if 'time_start' in result and 'time_end' in result:
