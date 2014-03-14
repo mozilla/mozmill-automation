@@ -23,6 +23,12 @@ class NotSupportedTestrunException(Exception):
     def __init__(self, testrun):
         Exception.__init__(self, 'Testrun not supported: %s' % testrun.__class__.__name__)
 
+class UpdateSettingsChangedException(Exception):
+    """ Exception for not persisted settings."""
+    def __init__(self, previous, current):
+        Exception.__init__(self, 'Unexpected change to update settings '
+                                 'from %s to %s' % (previous, current))
+
 class TestFailedException(Exception):
     """ Exception for failed tests. """
     def __init__(self):

@@ -633,6 +633,12 @@ class UpdateTestRun(TestRun):
                           dest="channel",
                           metavar="CHANNEL",
                           help="update channel")
+        update.add_option("--override-update-channel",
+                          dest="override_update_channels",
+                          action="append",
+                          help="Flag to allow updating the update-settings.ini "
+                               "for specific update channels (Works for "
+                               "beta, betatest and releasetest channels")
         update.add_option("--no-fallback",
                           dest="no_fallback",
                           default=False,
@@ -705,6 +711,24 @@ class UpdateTestRun(TestRun):
     def run_update_tests(self, is_fallback):
         self.prepare_channel()
 
+        # We have to check for 'None' in case we call from mozmill-ci and
+        # we want to give an optional value
+        # https://github.com/mozilla/mozmill-ci/issues/428
+        if self.options.override_update_channels and \
+                self.options.override_update_channels != ["None"]:
+
+            ini_file = application.UpdateSettingsIni(self._application)
+            current_channels = ini_file.get('Settings',
+                                            'ACCEPTED_MAR_CHANNEL_IDS')
+
+            # Merge the already accepted channel with users options
+            self.accepted_channels = set(current_channels.split(',')).union(
+                self.options.override_update_channels)
+
+
+            ini_file.set('Settings', 'ACCEPTED_MAR_CHANNEL_IDS',
+                                ','.join(self.accepted_channels))
+
         self.persisted["channel"] = self.channel
         if self.options.target_buildid:
             self.persisted["targetBuildID"] = self.options.target_buildid
@@ -715,6 +739,19 @@ class UpdateTestRun(TestRun):
             self.manifest_path = os.path.join(tests_path, type, "manifest.ini")
 
             TestRun.run_tests(self)
+
+            # We have to check for 'None' in case we call from mozmill-ci and
+            # we want to give an optional value
+            # https://github.com/mozilla/mozmill-ci/issues/428
+            if self.options.override_update_channels and \
+                    self.options.override_update_channels != ["None"]:
+
+                current_channels = ini_file.get('Settings',
+                                                'ACCEPTED_MAR_CHANNEL_IDS')
+                previous_channels = ','.join(self.accepted_channels)
+                if previous_channels != current_channels:
+                    raise errors.UpdateSettingsChangedException(previous_channels,
+                                                                current_channels)
         except Exception, e:
             print "*** Execution of test-run aborted: %s" % str(e)
         finally:
