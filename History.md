@@ -1,3 +1,9 @@
+2.0.6.1 / 2014-04-04
+====================
+
+ * Add --override-update-chanel parameter to set update channel restrictions (#132)
+ * 'filename' should be optional when creating the junit report (#130)
+
 2.0.6 / 2014-03-07
 ==================
 
