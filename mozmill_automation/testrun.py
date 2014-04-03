@@ -655,7 +655,7 @@ class UpdateTestRun(TestRun):
             self._backup_folder = os.path.join(self.workspace, 'binary_backup')
 
             print "*** Creating backup of binary: %s" % self._backup_folder
-            mozfile.remove(self._backup_folder, True)
+            mozfile.remove(self._backup_folder)
             shutil.copytree(self._folder, self._backup_folder)
 
     def prepare_channel(self):
