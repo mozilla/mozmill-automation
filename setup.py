@@ -15,9 +15,9 @@ NAME = 'mozmill-automation'
 VERSION = '2.1-dev'
 
 deps = ['mercurial == 2.6.2',
-        'mozdownload==1.10',
-        'mozfile == 1.0',
-        'mozinstall == 1.7',
+        'mozdownload >= 1.11.1',
+        'mozfile >= 1.0',
+        'mozinstall >= 1.7',
         'mozmill == 2.1-dev',
         ]
 
