@@ -54,21 +54,6 @@ def is_installer(path, application):
         return False
 
 
-class ApplicationIni(object):
-    """ Class to retrieve entries from the application.ini file. """
-
-    def __init__(self, binary):
-        self.ini_file = os.path.join(os.path.dirname(binary),
-                                     'application.ini')
-
-        self.config = ConfigParser.RawConfigParser()
-        self.config.read(self.ini_file)
-
-    def get(self, section, option):
-        """ Retrieve the value of an entry. """
-        return self.config.get(section, option)
-
-
 class UpdateChannel(object):
     """ Class to handle the update channel. """
 

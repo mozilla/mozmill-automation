@@ -17,6 +17,7 @@ import manifestparser
 import mozfile
 import mozinfo
 import mozinstall
+import mozversion
 import mozmill
 import mozmill.logger
 
@@ -317,10 +318,10 @@ class TestRun(object):
         try:
             self.prepare_application(self.binary)
 
-            ini = application.ApplicationIni(self._application)
+            version_info = mozversion.get_version(self.binary)
             print '*** Application: %s %s (%s)' % (
-                ini.get('App', 'Name'),
-                ini.get('App', 'Version'),
+                version_info.get('application_display_name'),
+                version_info.get('application_version'),
                 self._application)
 
             # Print platform details
@@ -334,7 +335,7 @@ class TestRun(object):
             self.repository.clone(path)
 
             # Update the mozmill-test repository to match the Gecko branch
-            app_repository_url = ini.get('App', 'SourceRepository')
+            app_repository_url = version_info.get('application_repository')
             branch_name = application.get_mozmill_tests_branch(app_repository_url)
 
             print "*** Updating branch of test repository to '%s'" % branch_name
