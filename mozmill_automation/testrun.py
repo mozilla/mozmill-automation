@@ -108,7 +108,7 @@ class TestRun(object):
             self._binary = build
             return
 
-        # Otherwise recursivily scan the folder and select the first found build
+        # Otherwise recursively scan the folder and select the first found build
         for root, dirs, files in os.walk(build):
             # Ensure we select the build by alphabetical order
             files.sort()

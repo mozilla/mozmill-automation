@@ -144,7 +144,7 @@ class JUnitReport(Report):
                 # strip the file extension
                 class_name = os.path.splitext(class_name)[0]
 
-                # replace periods with underscore to avoid them being interpreted as package seperators
+                # replace periods with underscore to avoid them being interpreted as package separators
                 class_name = class_name.replace('.', '_')
 
                 # replace path separators with periods to give implied package hierarchy
