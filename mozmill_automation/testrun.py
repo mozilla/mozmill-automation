@@ -79,6 +79,8 @@ class TestRun(object):
 
         self.addon_list = []
         self.downloaded_addons = []
+        self.preferences = {}
+
         self.testrun_index = 0
 
         self.last_failed_tests = None
@@ -282,7 +284,8 @@ class TestRun(object):
         print '*** Creating profile: %s' % profile_path
 
         profile_args = dict(profile=profile_path,
-                            addons=self.addon_list)
+                            addons=self.addon_list,
+                            preferences=self.preferences)
         runner_args = dict(binary=self._application)
         mozmill_args = dict(app=self.options.application,
                             handlers=handlers,
@@ -621,6 +624,14 @@ class UpdateTestRun(TestRun):
         TestRun.__init__(self, *args, **kwargs)
         self.options.restart = True
 
+        # We have to check for 'None' in case we call from mozmill-ci and
+        # we want to give an optional value
+        # https://github.com/mozilla/mozmill-ci/issues/428
+        if self.options.override_update_url and \
+                self.options.override_update_url != 'None':
+            self.preferences.update({'app.update.url.override' :
+                                      self.options.override_update_url})
+
         self.results = [ ]
 
         # Download of updates normally take longer than 60 seconds
@@ -639,6 +650,10 @@ class UpdateTestRun(TestRun):
                           help="Flag to allow updating the update-settings.ini "
                                "for specific update channels (Works for "
                                "beta, betatest and releasetest channels")
+        update.add_option("--override-update-url",
+                          dest="override_update_url",
+                          metavar="UPDATE_URL",
+                          help="forced URL to use for update checks")
         update.add_option("--no-fallback",
                           dest="no_fallback",
                           default=False,
@@ -729,9 +744,10 @@ class UpdateTestRun(TestRun):
             ini_file.set('Settings', 'ACCEPTED_MAR_CHANNEL_IDS',
                                 ','.join(self.accepted_channels))
 
+        # Update persisted data
         self.persisted["channel"] = self.channel
         if self.options.target_buildid:
-            self.persisted["targetBuildID"] = self.options.target_buildid
+            self.persisted['targetBuildID'] = self.options.target_buildid
 
         try:
             type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
