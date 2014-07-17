@@ -321,7 +321,7 @@ class TestRun(object):
         try:
             self.prepare_application(self.binary)
 
-            version_info = mozversion.get_version(self.binary)
+            version_info = mozversion.get_version(self._application)
             print '*** Application: %s %s (%s)' % (
                 version_info.get('application_display_name'),
                 version_info.get('application_version'),
