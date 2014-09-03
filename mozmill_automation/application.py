@@ -54,68 +54,6 @@ def is_installer(path, application):
         return False
 
 
-class UpdateChannel(object):
-    """ Class to handle the update channel. """
-
-    pref_regex = "(?<=pref\(\"app\.update\.channel\", \")([^\"]*)(?=\"\))"
-
-    def __init__(self, binary, *args, **kwargs):
-        self.folder = os.path.dirname(binary)
-
-    @property
-    def channel_prefs_path(self):
-        """ Returns the channel prefs path. """
-        for pref_folder in ('preferences', 'pref'):
-            pref_path = os.path.join(self.folder,
-                                     'defaults',
-                                     pref_folder,
-                                     'channel-prefs.js')
-            if os.path.exists(pref_path):
-                return pref_path
-        raise errors.NotFoundException('Channel prefs not found.', pref_path)
-
-    def _get_channel(self):
-        """ Returns the current update channel. """
-        try:
-            file = open(self.channel_prefs_path, "r")
-        except IOError:
-            raise
-        else:
-            content = file.read()
-            file.close()
-
-            result = re.search(self.pref_regex, content)
-            return result.group(0)
-
-    def _set_channel(self, value):
-        """ Sets the update channel. """
-
-        try:
-            file = open(self.channel_prefs_path, "r")
-        except IOError:
-            raise
-        else:
-            # Replace the current update channel with the specified one
-            content = file.read()
-            file.close()
-
-            # Replace the current channel with the specified one
-            result = re.sub(self.pref_regex, value, content)
-
-            try:
-                file = open(self.channel_prefs_path, "w")
-            except IOError:
-                raise
-            else:
-                file.write(result)
-                file.close()
-
-                # Check that the correct channel has been set
-                if value != self.channel:
-                    raise Exception("Update channel wasn't set correctly.")
-
-    channel = property(_get_channel, _set_channel, None)
-
 class UpdateSettingsIni(object):
     """ Class to retrieve and set entries in the update-settings.ini file. """
 

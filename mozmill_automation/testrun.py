@@ -623,6 +623,8 @@ class UpdateTestRun(TestRun):
 
     def __init__(self, *args, **kwargs):
         TestRun.__init__(self, *args, **kwargs)
+
+        self.channel = self.options.channel
         self.options.restart = True
 
         # We have to check for 'None' in case we call from mozmill-ci and
@@ -680,17 +682,6 @@ class UpdateTestRun(TestRun):
             mozfile.remove(self._backup_folder)
             shutil.copytree(self._folder, self._backup_folder)
 
-    def prepare_channel(self):
-        update_channel = application.UpdateChannel(self._application)
-
-        if not self.options.channel:
-            self.channel = update_channel.channel
-        else:
-            update_channel.channel = self.options.channel
-            self.channel = self.options.channel
-
-        print "*** Setting update channel to '%s'..." % self.channel
-
     def restore_application(self):
         """ Restores the backup of the application binary. """
         timeout = time.time() + 15
@@ -725,8 +716,6 @@ class UpdateTestRun(TestRun):
             self.run_update_tests(True)
 
     def run_update_tests(self, is_fallback):
-        self.prepare_channel()
-
         # We have to check for 'None' in case we call from mozmill-ci and
         # we want to give an optional value
         # https://github.com/mozilla/mozmill-ci/issues/428
