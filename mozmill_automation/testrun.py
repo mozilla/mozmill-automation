@@ -624,16 +624,7 @@ class UpdateTestRun(TestRun):
     def __init__(self, *args, **kwargs):
         TestRun.__init__(self, *args, **kwargs)
 
-        self.channel = self.options.channel
         self.options.restart = True
-
-        # We have to check for 'None' in case we call from mozmill-ci and
-        # we want to give an optional value
-        # https://github.com/mozilla/mozmill-ci/issues/428
-        if self.options.override_update_url and \
-                self.options.override_update_url != 'None':
-            self.preferences.update({'app.update.url.override' :
-                                      self.options.override_update_url})
 
         self.results = [ ]
 
@@ -643,16 +634,16 @@ class UpdateTestRun(TestRun):
 
     def add_options(self, parser):
         update = optparse.OptionGroup(parser, "Update options")
-        update.add_option("--channel",
-                          dest="channel",
-                          metavar="CHANNEL",
-                          help="update channel")
-        update.add_option("--override-update-channel",
-                          dest="override_update_channels",
+        update.add_option("--allow-mar-channel",
+                          dest="allowed_mar_channels",
                           action="append",
-                          help="Flag to allow updating the update-settings.ini "
-                               "for specific update channels (Works for "
-                               "beta, betatest and releasetest channels")
+                          help="Additional MAR channel to be allowed for "
+                               "updates, e.g. 'firefox-mozilla-beta' for "
+                               "updating a release to the latest beta build")
+        update.add_option("--channel",
+                          dest="update_channel",
+                          metavar="CHANNEL",
+                          help="Update channel to use for the update tests")
         update.add_option("--override-update-url",
                           dest="override_update_url",
                           metavar="UPDATE_URL",
@@ -719,8 +710,8 @@ class UpdateTestRun(TestRun):
         # We have to check for 'None' in case we call from mozmill-ci and
         # we want to give an optional value
         # https://github.com/mozilla/mozmill-ci/issues/428
-        if self.options.override_update_channels and \
-                self.options.override_update_channels != ["None"]:
+        if self.options.allowed_mar_channels and \
+                self.options.allowed_mar_channels != ["None"]:
 
             ini_file = application.UpdateSettingsIni(self._application)
             current_channels = ini_file.get('Settings',
@@ -728,16 +719,32 @@ class UpdateTestRun(TestRun):
 
             # Merge the already accepted channel with users options
             self.accepted_channels = set(current_channels.split(',')).union(
-                self.options.override_update_channels)
+                self.options.allowed_mar_channels)
 
 
             ini_file.set('Settings', 'ACCEPTED_MAR_CHANNEL_IDS',
                                 ','.join(self.accepted_channels))
 
-        # Update persisted data
-        self.persisted["channel"] = self.channel
-        if self.options.target_buildid:
-            self.persisted['targetBuildID'] = self.options.target_buildid
+        # We have to check for 'None' in case we call from mozmill-ci and
+        # we want to give an optional value
+        # https://github.com/mozilla/mozmill-ci/issues/428
+        if self.options.override_update_url and \
+                self.options.override_update_url != 'None':
+            self.preferences.update({'app.update.url.override' :
+                                      self.options.override_update_url})
+
+        # Update persisted data with update settings
+        self.persisted[self.type] = {
+            'channel': self.options.update_channel,
+            'allowed_mar_channels': self.options.allowed_mar_channels,
+            'update_url': self.options.override_update_url,
+            'targetBuildID': self.options.target_buildid,
+        }
+
+        # Keep for backward compatibility for now.
+        # TODO: Removed once bug 1063584 has been fixed
+        self.persisted["channel"] = self.options.update_channel
+        self.persisted['targetBuildID'] = self.options.target_buildid
 
         try:
             type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
@@ -749,8 +756,8 @@ class UpdateTestRun(TestRun):
             # We have to check for 'None' in case we call from mozmill-ci and
             # we want to give an optional value
             # https://github.com/mozilla/mozmill-ci/issues/428
-            if self.options.override_update_channels and \
-                    self.options.override_update_channels != ["None"]:
+            if self.options.allowed_mar_channels and \
+                    self.options.allowed_mar_channels != ["None"]:
 
                 current_channels = ini_file.get('Settings',
                                                 'ACCEPTED_MAR_CHANNEL_IDS')
