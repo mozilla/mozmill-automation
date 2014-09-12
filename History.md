@@ -1,3 +1,13 @@
+2.0.7 / 2014-09-12
+==================
+
+ * Release version 2.0.7 (#170)
+ * Upgrade mozversion for handling new signed builds on OS X (#166)
+ * Pass-through all update settings via persisted.update (#164)
+ * Update testrun should leave changes to 'channel-prefs.js' file to the tests (#164)
+ * Retrival of application version information broken due to wrong binary specified (#157)
+ * Use mozversion to retrieve application information #121
+
 2.0.6.2 / 2014-07-17
 ====================
 
