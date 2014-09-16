@@ -1,7 +1,12 @@
+2.0.8 / 2014-09-16
+==================
+
+ * Release version 2.0.8 and upgrade to Mozmill 2.0.8 (#173)
+
 2.0.7 / 2014-09-12
 ==================
 
- * Release version 2.0.7 (#170)
+ * Release version 2.0.7 and upgrade to Mozmill 2.0.7 (#170)
  * Upgrade mozversion for handling new signed builds on OS X (#166)
  * Pass-through all update settings via persisted.update (#164)
  * Update testrun should leave changes to 'channel-prefs.js' file to the tests (#164)
@@ -22,7 +27,7 @@
 2.0.6 / 2014-03-07
 ==================
 
- * Release version 2.0.6 and bump to Mozmill 2.0.6 (#128)
+ * Release version 2.0.6 and upgrade to Mozmill 2.0.6 (#128)
  * Use APPLICATION_BINARY_NAMES map for getting the correct binary (#125)
 
 2.0.5 / 2014-02-10
