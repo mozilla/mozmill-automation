@@ -735,12 +735,12 @@ class UpdateTestRun(TestRun):
             print "*** Execution of test-run aborted: %s" % str(e)
         finally:
             try:
-                path = self._mozmill.persisted['update']['stagingPath']
-                print "*** Removing updates staging folder: %s" % path
-                mozfile.remove(path)
-            except Exception, e:
+                if 'stagingPath' in self._mozmill.persisted[self.type]:
+                    path = self._mozmill.persisted[self.type]['stagingPath']
+                    print "*** Removing updates staging folder: %s" % path
+                    mozfile.remove(path)
+            except OSError, e:
                 print "*** Failed to remove the update staging folder: " + str(e)
-                self.exception_type, self.exception, self.tb = sys.exc_info()
 
 
 def exec_testrun(cls):
