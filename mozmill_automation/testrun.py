@@ -626,6 +626,14 @@ class UpdateTestRun(TestRun):
 
         self.options.restart = True
 
+        # We have to check for 'None' in case we call from mozmill-ci and
+        # we want to give an optional value
+        # https://github.com/mozilla/mozmill-ci/issues/428
+        if self.options.allowed_mar_channels == ['None']:
+            self.options.allowed_mar_channels = None
+        if self.options.override_update_url == 'None':
+            self.options.override_update_url = None
+
         self.results = [ ]
 
         # Download of updates normally take longer than 60 seconds
@@ -707,64 +715,22 @@ class UpdateTestRun(TestRun):
             self.run_update_tests(True)
 
     def run_update_tests(self, is_fallback):
-        # We have to check for 'None' in case we call from mozmill-ci and
-        # we want to give an optional value
-        # https://github.com/mozilla/mozmill-ci/issues/428
-        if self.options.allowed_mar_channels and \
-                self.options.allowed_mar_channels != ["None"]:
-
-            ini_file = application.UpdateSettingsIni(self._application)
-            current_channels = ini_file.get('Settings',
-                                            'ACCEPTED_MAR_CHANNEL_IDS')
-
-            # Merge the already accepted channel with users options
-            self.accepted_channels = set(current_channels.split(',')).union(
-                self.options.allowed_mar_channels)
-
-
-            ini_file.set('Settings', 'ACCEPTED_MAR_CHANNEL_IDS',
-                                ','.join(self.accepted_channels))
-
-        # We have to check for 'None' in case we call from mozmill-ci and
-        # we want to give an optional value
-        # https://github.com/mozilla/mozmill-ci/issues/428
-        if self.options.override_update_url and \
-                self.options.override_update_url != 'None':
-            self.preferences.update({'app.update.url.override' :
-                                      self.options.override_update_url})
-
-        # Update persisted data with update settings
-        self.persisted[self.type] = {
-            'channel': self.options.update_channel,
-            'allowed_mar_channels': self.options.allowed_mar_channels,
-            'update_url': self.options.override_update_url,
-            'targetBuildID': self.options.target_buildid,
-        }
-
-        # Keep for backward compatibility for now.
-        # TODO: Removed once bug 1063584 has been fixed
-        self.persisted["channel"] = self.options.update_channel
-        self.persisted['targetBuildID'] = self.options.target_buildid
+        # TODO: Backup and restore channel-prefs.js and update-setting.ini
 
         try:
+            # Update persisted data with update settings
+            self.persisted[self.type] = {
+                'channel': self.options.update_channel,
+                'allowed_mar_channels': self.options.allowed_mar_channels,
+                'update_url': self.options.override_update_url,
+                'targetBuildID': self.options.target_buildid,
+            }
+
             type = 'testFallbackUpdate' if is_fallback else 'testDirectUpdate'
             tests_path = self.get_tests_folder()
             self.manifest_path = os.path.join(tests_path, type, "manifest.ini")
 
             TestRun.run_tests(self)
-
-            # We have to check for 'None' in case we call from mozmill-ci and
-            # we want to give an optional value
-            # https://github.com/mozilla/mozmill-ci/issues/428
-            if self.options.allowed_mar_channels and \
-                    self.options.allowed_mar_channels != ["None"]:
-
-                current_channels = ini_file.get('Settings',
-                                                'ACCEPTED_MAR_CHANNEL_IDS')
-                previous_channels = ','.join(self.accepted_channels)
-                if previous_channels != current_channels:
-                    raise errors.UpdateSettingsChangedException(previous_channels,
-                                                                current_channels)
         except Exception, e:
             print "*** Execution of test-run aborted: %s" % str(e)
         finally:

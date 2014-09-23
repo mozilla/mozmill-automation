@@ -52,24 +52,3 @@ def is_installer(path, application):
             return False
     except Exception:
         return False
-
-
-class UpdateSettingsIni(object):
-    """ Class to retrieve and set entries in the update-settings.ini file. """
-
-    def __init__(self, binary):
-        self.ini_file = os.path.join(os.path.dirname(binary),
-                                     'update-settings.ini')
-        self.config = ConfigParser.RawConfigParser()
-        self.config.optionxform = str
-        self.config.read(self.ini_file)
-
-    def get(self, section, option):
-        """ Retrieve the value of an entry. """
-        return self.config.get(section, option)
-
-    def set(self, section, option, value):
-        """ Set the value of an entry. """
-        self.config.set(section, option, value)
-        with open(self.ini_file, 'w+') as file:
-            self.config.write(file)
