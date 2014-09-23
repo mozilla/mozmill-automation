@@ -735,7 +735,7 @@ class UpdateTestRun(TestRun):
             print "*** Execution of test-run aborted: %s" % str(e)
         finally:
             try:
-                path = self._mozmill.persisted["updateStagingPath"]
+                path = self._mozmill.persisted['update']['stagingPath']
                 print "*** Removing updates staging folder: %s" % path
                 mozfile.remove(path)
             except Exception, e:
