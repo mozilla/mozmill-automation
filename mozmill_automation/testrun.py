@@ -715,8 +715,6 @@ class UpdateTestRun(TestRun):
             self.run_update_tests(True)
 
     def run_update_tests(self, is_fallback):
-        # TODO: Backup and restore channel-prefs.js and update-setting.ini
-
         try:
             # Update persisted data with update settings
             self.persisted[self.type] = {
@@ -734,13 +732,31 @@ class UpdateTestRun(TestRun):
         except Exception, e:
             print "*** Execution of test-run aborted: %s" % str(e)
         finally:
+            update_data = self._mozmill.persisted[self.type]
+
             try:
-                if 'stagingPath' in self._mozmill.persisted[self.type]:
-                    path = self._mozmill.persisted[self.type]['stagingPath']
-                    print "*** Removing updates staging folder: %s" % path
-                    mozfile.remove(path)
+                if 'stagingPath' in update_data:
+                    mozfile.remove(update_data['stagingPath'])
             except OSError, e:
-                print "*** Failed to remove the update staging folder: " + str(e)
+                print "*** Failed to remove update staging folder: %s" % str(e)
+
+            # Reset channel-prefs.js file if modified
+            try:
+                if 'default_update_channel' in update_data:
+                    path = update_data['default_update_channel']['path']
+                    with open(path, 'w') as f:
+                        f.write(update_data['default_update_channel']['content'])
+            except IOError as e:
+                print "*** Failed to reset the default update channel: %s" % str(e)
+
+            # Reset update-settings.ini file if modified
+            try:
+                if 'default_mar_channels' in update_data:
+                    path = update_data['default_mar_channels']['path']
+                    with open(path, 'w') as f:
+                        f.write(update_data['default_mar_channels']['content'])
+            except IOError as e:
+                print "*** Failed to reset the default mar channels: %s" % str(e)
 
 
 def exec_testrun(cls):
