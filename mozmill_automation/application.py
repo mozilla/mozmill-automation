@@ -2,19 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import ConfigParser
 import os
 import re
 import sys
 
+import mozinfo
+
 import errors
-
-
-def get_bin_folder(app_folder):
-    """ Returns the folder which contains the binaries of the application. """
-    if sys.platform in ("darwin"):
-        app_folder = os.path.join(app_folder, 'Contents', 'MacOS')
-    return app_folder
 
 
 def get_mozmill_tests_branch(gecko_branch):
@@ -32,15 +26,17 @@ def get_mozmill_tests_branch(gecko_branch):
     return branch
 
 
-def is_app_folder(path):
-    """ Checks if the folder is an application folder. """
-    if sys.platform != "darwin":
+def is_application(path, application):
+    """Check if the path is a supported application"""
+    if path.endswith('.app'):
+        path = os.path.join(path, 'Contents', 'MacOS')
+    else:
         path = os.path.dirname(path)
 
-    file = os.path.join(get_bin_folder(path),
-                        "application.ini")
+    if mozinfo.isWin:
+        application += '.exe'
 
-    return os.path.exists(file)
+    return os.path.exists(os.path.join(path, application))
 
 
 def is_installer(path, application):
