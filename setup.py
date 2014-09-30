@@ -12,7 +12,7 @@ except IOError:
     description = None
 
 NAME = 'mozmill-automation'
-VERSION = '2.0.8'
+VERSION = '2.0.8.1'
 
 deps = ['mercurial == 2.6.2',
         'mozdownload == 1.11.1',
@@ -20,7 +20,7 @@ deps = ['mercurial == 2.6.2',
         'mozinfo == 0.7',
         'mozinstall == 1.9',
         'mozmill == 2.0.8',
-        'mozversion >= 0.7'
+        'mozversion == 0.7'
         ]
 
 setup(name=NAME,

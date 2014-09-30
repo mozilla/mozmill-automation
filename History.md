@@ -1,3 +1,12 @@
+2.0.8.1 / 2014-09-30
+====================
+
+ * Testruns are failing on OS X if real binary or new signed app bundle get specified (#183)
+ * UpdateTestrun has to reset update-settings.ini and channel-prefs.js files (#181)
+ * Update testruns fail if 'stagingPath' does not exist (#154)
+ * Fix updateStagingPath property for new location (#177)
+ * Remove handling of update-settings.ini file (#164)
+
 2.0.8 / 2014-09-16
 ==================
 
