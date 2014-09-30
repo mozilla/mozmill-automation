@@ -103,10 +103,10 @@ class TestRun(object):
             raise errors.NotFoundException('Path cannot be found', build)
 
         # Check if it's an installer or an already installed build
-        # We have to custom checks via application.is_app_folder as long as
+        # We have to custom checks via application.is_application as long as
         # mozinstall can't check for an installer (bug 795288)
         if application.is_installer(build, self.options.application) or \
-                application.is_app_folder(build):
+                application.is_application(build, self.options.application):
             self._binary = build
             return
 

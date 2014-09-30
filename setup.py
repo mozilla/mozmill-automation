@@ -17,6 +17,7 @@ VERSION = '2.0.8'
 deps = ['mercurial == 2.6.2',
         'mozdownload == 1.11.1',
         'mozfile == 1.1',
+        'mozinfo == 0.7',
         'mozinstall == 1.9',
         'mozmill == 2.0.8',
         'mozversion >= 0.7'
