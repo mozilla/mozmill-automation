@@ -17,9 +17,10 @@ import manifestparser
 import mozfile
 import mozinfo
 import mozinstall
-import mozversion
+import mozlog
 import mozmill
 import mozmill.logger
+import mozversion
 
 import application
 import errors
@@ -45,7 +46,7 @@ class TestRun(object):
     """Base class to execute a Mozmill test-run"""
 
     def __init__(self, args=sys.argv[1:], debug=False, manifest_path=None,
-                 timeout=None):
+                 timeout=None, mozlog_level='INFO'):
 
         usage = "usage: %prog [options] (binary|folder)"
         parser = optparse.OptionParser(usage=usage)
@@ -88,6 +89,10 @@ class TestRun(object):
         self.exception_type = None
         self.exception = None
         self.tb = None
+
+        self.mozlogger = mozlog.getLogger('mozmill-automation')
+        self.mozlogger.setLevel(getattr(mozlog, mozlog_level.upper()))
+
 
     def _get_binary(self):
         """ Returns the binary to test. """
@@ -180,12 +185,12 @@ class TestRun(object):
             filename = url.split('?')[0].rstrip('/').rsplit('/', 1)[-1]
             target_path = os.path.join(target_path, filename)
 
-            print "*** Downloading %s to %s" % (url, target_path)
+            self.mozlogger.info('Downloading %s to %s' % (url, target_path))
             urllib.urlretrieve(url, target_path)
 
             return target_path
-        except Exception, e:
-            print e
+        except Exception:
+            self.mozlogger.exception('Failed to download addon from: %s' % url)
 
     def get_tests_folder(self, *args):
         """ Getting the correct tests path for the testrun. """
@@ -218,7 +223,7 @@ class TestRun(object):
         if application.is_installer(self.binary, self.options.application):
             install_path = os.path.join(self.workspace, 'binary')
 
-            print "*** Installing build: %s" % self.binary
+            self.mozlogger.info('Installing build: %s' % self.binary)
             self._folder = mozinstall.install(self.binary, install_path)
 
             binary_name = APPLICATION_BINARY_NAMES[self.options.application]
@@ -247,10 +252,10 @@ class TestRun(object):
         for path in self.downloaded_addons:
             try:
                 # Remove downloaded add-on
-                print "*** Removing downloaded add-on '%s'." % path
+                self.mozlogger.info('Removing downloaded add-on: %s' % path)
                 mozfile.remove(path)
             except:
-                print "*** Failed to remove downloaded add-on '%s'." % path
+                self.mozlogger.exception('Failed to remove downloaded add-on: %s' % path)
 
     @property
     def report_type(self):
@@ -282,7 +287,7 @@ class TestRun(object):
 
         # instantiate MozMill
         profile_path = os.path.join(self.workspace, 'profile')
-        print '*** Creating profile: %s' % profile_path
+        self.mozlogger.info('Creating profile: %s' % profile_path)
 
         profile_args = dict(profile=profile_path,
                             addons=self.addon_list,
@@ -307,7 +312,7 @@ class TestRun(object):
         finally:
             self.results = self._mozmill.finish()
 
-            print "*** Removing profile: %s" % profile_path
+            self.mozlogger.info('Removing profile: %s' % profile_path)
             mozfile.remove(profile_path)
 
         # Whenever a test fails it has to be marked, so we quit with the correct exit code
@@ -322,26 +327,25 @@ class TestRun(object):
             self.prepare_application(self.binary)
             version_info = mozversion.get_version(self._application)
 
-            print '*** Application: %s %s (%s)' % (
+            self.mozlogger.info('Application: %s %s (%s)' % (
                 version_info.get('application_display_name'),
                 version_info.get('application_version'),
-                self._application)
+                self._application))
 
-            # Print platform details
-            print '*** Platform: %s %s %sbit' % (
+            self.mozlogger.info('Platform: %s %s %sbit' % (
                 str(mozinfo.os).capitalize(),
                 mozinfo.version,
-                mozinfo.bits)
+                mozinfo.bits))
 
             path = os.path.join(self.workspace, 'mozmill-tests')
-            print "*** Cloning test repository to '%s'" % path
+            self.mozlogger.info('Cloning test repository to: %s' % path)
             self.repository.clone(path)
 
             # Update the mozmill-test repository to match the Gecko branch
             app_repository_url = version_info.get('application_repository')
             branch_name = application.get_mozmill_tests_branch(app_repository_url)
 
-            print "*** Updating branch of test repository to '%s'" % branch_name
+            self.mozlogger.info('Updating branch of test repository to: %s' % branch_name)
             self.repository.update(branch_name)
 
             if self.options.addons:
@@ -360,13 +364,13 @@ class TestRun(object):
         finally:
             # Remove the build when it has been installed before
             if application.is_installer(self.binary, self.options.application):
-                print "*** Uninstalling build: %s" % self._folder
+                self.mozlogger.info('Uninstalling build: %s' % self._folder)
                 mozinstall.uninstall(self._folder)
 
             self.remove_downloaded_addons()
 
             # Remove the temporarily cloned repository
-            print "*** Removing test repository '%s'" % self.repository.path
+            self.mozlogger.info('Removing test repository: %s' % self.repository.path)
             self.repository.remove()
 
             # If an exception has been thrown, print it here and exit with status 3.
@@ -429,7 +433,7 @@ class AddonsTestRun(TestRun):
             platform = 'linux' if mozinfo.os in ['bsd', 'unix'] else mozinfo.os
 
             return config.get("download", platform)
-        except Exception, e:
+        except Exception:
             raise errors.NotFoundException('Could not read URL settings', filename)
 
     def run_tests(self):
@@ -449,14 +453,14 @@ class AddonsTestRun(TestRun):
 
                 try:
                     url = self.get_download_url()
-                except errors.NotFoundException, e:
-                    print str(e)
+                except errors.NotFoundException:
+                    self.mozlogger.exception('Failed to get addon: %s' % addon)
                     continue
 
                 # Check if the download URL is trusted and we can proceed
                 if not "addons.mozilla.org" in url and not self.options.with_untrusted:
-                    print "*** Download URL for '%s' is not trusted." % os.path.basename(url)
-                    print "*** Use --with-untrusted to force testing this add-on."
+                    self.mozlogger.warning("Download URL for '%s' is not trusted." % os.path.basename(url))
+                    self.mozlogger.info('Use --with-untrusted to force testing this add-on.')
                     continue
 
                 # Download the add-on
@@ -468,19 +472,18 @@ class AddonsTestRun(TestRun):
                 self.addon_list.append(self.target_addon)
                 TestRun.run_tests(self)
 
-            except Exception, e:
-                print str(e)
+            except Exception:
+                self.mozlogger.exception('Failed to download target add-on: %s' % addon)
                 self.exception_type, self.exception, self.tb = sys.exc_info()
 
             finally:
                 if self.target_addon:
                     self.addon_list.remove(self.target_addon)
                     try:
-                        print "*** Removing target add-on '%s'." % self.target_addon
+                        self.mozlogger.info('Removing target add-on: %s' % self.target_addon)
                         mozfile.remove(self.target_addon)
-                    except:
-                        print "*** Failed to remove target add-on '%s'." % self.target_addon
-
+                    except OSError:
+                        self.mozlogger.exception('Failed to remove target add-on: %s' % self.target_addon)
 
 class EnduranceTestRun(TestRun):
     """Class to execute an endurance test-run"""
@@ -679,7 +682,7 @@ class UpdateTestRun(TestRun):
         if not self.options.no_fallback:
             self._backup_folder = os.path.join(self.workspace, 'binary_backup')
 
-            print "*** Creating backup of binary: %s" % self._backup_folder
+            self.mozlogger.info('Creating backup of binary: %s' % self._backup_folder)
             mozfile.remove(self._backup_folder)
             shutil.copytree(self._folder, self._backup_folder)
 
@@ -687,20 +690,20 @@ class UpdateTestRun(TestRun):
         """ Restores the backup of the application binary. """
         timeout = time.time() + 15
 
-        print "*** Removing binary at '%s'" % self._folder
+        self.mozlogger.info('Removing binary at: %s' % self._folder)
         while True:
             try:
                 mozfile.remove(self._folder)
                 break
-            except Exception, e:
-                print str(e)
+            except Exception:
+                self.mozlogger.exception('Failed to remove binary at: %s' % self._folder)
                 if time.time() >= timeout:
-                    print "*** Cannot remove folder '%s'" % self._folder
+                    self.mozlogger.error('Timeout while removing: %s' % self._folder)
                     raise
                 else:
                     time.sleep(1)
 
-        print "*** Restoring backup from '%s'" % self._backup_folder
+        self.mozlogger.info('Restoring backup from: %s' % self._backup_folder)
         shutil.move(self._backup_folder, self._folder)
 
     def run_tests(self):
@@ -731,16 +734,16 @@ class UpdateTestRun(TestRun):
             self.manifest_path = os.path.join(tests_path, type, "manifest.ini")
 
             TestRun.run_tests(self)
-        except Exception, e:
-            print "*** Execution of test-run aborted: %s" % str(e)
+        except Exception:
+            self.mozlogger.exception('Execution of test-run aborted')
         finally:
             update_data = self._mozmill.persisted[self.type]
 
             try:
                 if 'stagingPath' in update_data:
                     mozfile.remove(update_data['stagingPath'])
-            except OSError, e:
-                print "*** Failed to remove update staging folder: %s" % str(e)
+            except OSError:
+                self.mozlogger.exception('Failed to remove update staging folder: %s' % update_data['stagingPath'])
 
             # Reset channel-prefs.js file if modified
             try:
@@ -749,7 +752,7 @@ class UpdateTestRun(TestRun):
                     with open(path, 'w') as f:
                         f.write(update_data['default_update_channel']['content'])
             except IOError as e:
-                print "*** Failed to reset the default update channel: %s" % str(e)
+                self.mozlogger.exception('Failed to reset the default update channel: %s' % update_data['default_update_channel']['path'])
 
             # Reset update-settings.ini file if modified
             try:
@@ -758,7 +761,7 @@ class UpdateTestRun(TestRun):
                     with open(path, 'w') as f:
                         f.write(update_data['default_mar_channels']['content'])
             except IOError as e:
-                print "*** Failed to reset the default mar channels: %s" % str(e)
+                self.mozlogger.exception('Failed to reset the default mar channels: %s' % update_data['default_mar_channels']['path'])
 
 
 def exec_testrun(cls):
@@ -792,3 +795,4 @@ def remote_cli():
 
 def update_cli():
     exec_testrun(UpdateTestRun)
+

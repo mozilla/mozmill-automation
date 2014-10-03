@@ -16,11 +16,12 @@ VERSION = '2.1-dev'
 
 deps = ['mercurial == 2.6.2',
         'mozdownload >= 1.11.1',
-        'mozinfo >= 0.7',
         'mozfile >= 1.0',
+        'mozinfo >= 0.7',
         'mozinstall >= 1.7',
+        'mozlog >= 2.9',
         'mozmill == 2.1-dev',
-        'mozversion >= 0.7'
+        'mozversion >= 0.7',
         ]
 
 setup(name=NAME,
