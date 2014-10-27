@@ -633,6 +633,8 @@ class UpdateTestRun(TestRun):
             self.options.allowed_mar_channels = None
         if self.options.override_update_url == 'None':
             self.options.override_update_url = None
+        if self.options.target_buildid == 'None':
+            self.options.target_buildid = None
 
         self.results = [ ]
 
