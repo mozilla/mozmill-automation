@@ -1,3 +1,9 @@
+2.0.9 / 2014-10-27
+==================
+
+ * Update various module dependencies for Mozmill 2.0.9 (#193)
+ * Adjust handling of --target-buildid for usage with Mozmill CI (#186)
+
 2.0.8.1 / 2014-09-30
 ====================
 
