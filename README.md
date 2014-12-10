@@ -5,7 +5,7 @@ at [Mozilla][mozilla] runs UI and integration tests for Firefox.
 For more information see our [project page][project] for automation
 related topics.
 
-[team]: https://wiki.mozilla.org/Auto-tools/Automation_Development/
+[team]: https://wiki.mozilla.org/QA/Automation
 [mozilla]: http://www.mozilla.org/
 [project]: https://wiki.mozilla.org/Auto-tools/Automation_Development/Projects/Mozmill_Automation
 
