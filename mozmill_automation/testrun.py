@@ -291,12 +291,13 @@ class TestRun(object):
 
         profile_args = dict(profile=profile_path,
                             addons=self.addon_list,
-                            preferences=self.preferences)
-        runner_args = dict(binary=self._application)
+                            preferences=self.preferences,
+                            )
         mozmill_args = dict(app=self.options.application,
+                            binary=self._application,
                             handlers=handlers,
                             profile_args=profile_args,
-                            runner_args=runner_args)
+                            )
         if self.timeout:
             mozmill_args['jsbridge_timeout'] = self.timeout
         self._mozmill = mozmill.MozMill.create(**mozmill_args)
