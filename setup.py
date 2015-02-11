@@ -15,10 +15,10 @@ NAME = 'mozmill-automation'
 VERSION = '2.0.9'
 
 deps = ['mercurial == 2.6.2',
-        'mozdownload == 1.12',
+        'mozdownload == 1.13',
         'mozfile == 1.1',
         'mozinfo == 0.7',
-        'mozinstall == 1.10',
+        'mozinstall == 1.11',
         'mozmill == 2.0.9',
         'mozversion == 1.0',
         ]
@@ -35,7 +35,7 @@ setup(name=NAME,
                    'Operating System :: OS Independent',
                    'Programming Language :: Python',
                    'Topic :: Software Development :: Libraries :: Python Modules',
-                  ],
+                   ],
       keywords='mozilla',
       author='Mozilla Automation and Tools team',
       author_email='tools@lists.mozilla.org',
