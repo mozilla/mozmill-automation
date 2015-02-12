@@ -1,3 +1,9 @@
+2.0.9.1 / 2015-02-12
+====================
+
+ * Upgrade to mozdownload 1.13 and mozinstall 1.11 (#204)
+ * If no application repository information is available, assume mozilla-release (#196)
+
 2.0.9 / 2014-10-27
 ==================
 
