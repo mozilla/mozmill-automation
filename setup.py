@@ -12,15 +12,24 @@ except IOError:
     description = None
 
 NAME = 'mozmill-automation'
-VERSION = '2.0.10'
+VERSION = '2.0.10.2'
 
 deps = ['mercurial == 2.6.2',
-        'mozdownload == 1.13',
         'mozfile == 1.1',
         'mozinfo == 0.7',
         'mozinstall == 1.11',
-        'mozmill == 2.0.10',
+        'mozmill == 2.0.10.2',
         'mozversion == 1.0',
+
+        # It is not considered best practice to use install_requires to pin
+        # dependencies to specific versions, or to specify sub-dependencies
+        # (i.e. dependencies of your dependencies).
+        #
+        # But we have to do so to ensure to not run into dep conflicts. More
+        # details see bug 1196122.
+        'mozdevice < 0.46',
+        'mozlog >= 2.0, <3.0',
+        'moznetwork < 0.27',
         ]
 
 setup(name=NAME,
